@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05070C">
+<title>HUNTER: SYSTEM</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; background: #05070C; }
+  body {
+    color: #DCEFFF;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  .sys-font { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .body-font { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .num { font-family: "SF Mono", "Consolas", "JetBrains Mono", monospace; }
+  input:focus, button:focus, textarea:focus { outline: 2px solid #2ED3FF; outline-offset: 1px; }
+  input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
+  button { font-family: inherit; }
+  @keyframes popIn {
+    0% { transform: scale(0.9); opacity: 0; }
+    60% { transform: scale(1.02); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .glow-text { text-shadow: 0 0 12px rgba(46,211,255,0.5); }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #1B2A45; border-radius: 3px; }
+
+  .sys-window { position: relative; background: linear-gradient(180deg, #0C1220 0%, #0A0F1A 100%); border-radius: 2px; padding: 18px; box-shadow: 0 0 0 1px rgba(0,0,0,0.4); }
+  .sys-corner { position: absolute; width: 12px; height: 12px; }
+  .input-cell { width: 100%; background: #080B12; border: 1px solid #1B2A45; border-radius: 2px; color: #DCEFFF; padding: 7px 8px; font-size: 13px; text-align: center; }
+  .tab-btn { flex: 1; padding: 13px 0; background: transparent; border: none; font-size: 9.5px; letter-spacing: 1px; font-weight: 700; cursor: pointer; }
+  .mini-stat { background: #0C1220; border-radius: 2px; padding: 12px 8px; text-align: center; }
+  .checklist-btn { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; background: #0C1220; border-radius: 2px; padding: 14px; margin-bottom: 10px; cursor: pointer; }
+</style>
+
+<link rel="manifest" href="./manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HUNTER">
+<link rel="icon" href="./icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   DATA + CONFIG  (ported unchanged from the original app)
+   ============================================================ */
+const HUNTER_NAME = "Saksham";
+
+const PLAN = {
+  Push: [
+    { name: "Barbell Bench Press", sets: 4, reps: "6-10", type: "bilateral" },
+    { name: "Dumbbell Overhead Press", sets: 3, reps: "8-10", type: "bilateral" },
+    { name: "Incline Dumbbell Press", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Single-Arm DB Shrug", sets: 3, reps: "12", type: "unilateral", note: "Right side first" },
+    { name: "Lateral Raises", sets: 3, reps: "12-15", type: "bilateral" },
+    { name: "Triceps Pushdown / Dips", sets: 3, reps: "10-12", type: "bilateral" },
+  ],
+  Pull: [
+    { name: "Barbell Row (bent-over or chest-supported)", sets: 4, reps: "6-10", type: "bilateral" },
+    { name: "Pull-ups / Lat Pulldown", sets: 4, reps: "8-12", type: "bilateral" },
+    { name: "Single-Arm DB Row", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Face Pulls", sets: 3, reps: "15", type: "bilateral" },
+    { name: "Dumbbell Curl", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Left-Arm Curl (bonus)", sets: 1, reps: "10-12", type: "left-only", note: "Catch-up volume" },
+  ],
+  Legs: [
+    { name: "Squat", sets: 4, reps: "6-10", type: "bilateral" },
+    { name: "Bulgarian Split Squat", sets: 3, reps: "10-12", type: "unilateral", note: "Left leg first" },
+    { name: "Romanian Deadlift", sets: 3, reps: "8-10", type: "bilateral" },
+    { name: "Walking Lunge", sets: 3, reps: "10-12", type: "unilateral", note: "Left leg first" },
+    { name: "Leg Curl", sets: 3, reps: "12", type: "bilateral" },
+    { name: "Calf Raises", sets: 4, reps: "15", type: "bilateral" },
+  ],
+  Rest: [],
+};
+
+const WEEK_MAP = ["Rest", "Push", "Pull", "Legs", "Push", "Pull", "Legs"];
+const RANKS = [
+  { min: 0, label: "E", color: "#6B7A91" },
+  { min: 5, label: "D", color: "#4ADE80" },
+  { min: 10, label: "C", color: "#2ED3FF" },
+  { min: 15, label: "B", color: "#8B6FFF" },
+  { min: 20, label: "A", color: "#FF9F5A" },
+  { min: 25, label: "S", color: "#FFD166" },
+];
+
+const INCREMENTS = {
+  "Barbell Bench Press": 2.5,
+  "Dumbbell Overhead Press": 2,
+  "Incline Dumbbell Press": 2,
+  "Single-Arm DB Shrug": 2,
+  "Lateral Raises": 1,
+  "Triceps Pushdown / Dips": 2.5,
+  "Barbell Row (bent-over or chest-supported)": 2.5,
+  "Pull-ups / Lat Pulldown": 2.5,
+  "Single-Arm DB Row": 2,
+  "Face Pulls": 2.5,
+  "Dumbbell Curl": 1,
+  "Left-Arm Curl (bonus)": 1,
+  Squat: 5,
+  "Bulgarian Split Squat": 2,
+  "Romanian Deadlift": 5,
+  "Walking Lunge": 2,
+  "Leg Curl": 2.5,
+  "Calf Raises": 5,
+};
+
+const EXERCISE_CATEGORY = {};
+Object.entries(PLAN).forEach(([cat, exs]) => {
+  if (cat === "Rest") return;
+  exs.forEach((ex) => { EXERCISE_CATEGORY[ex.name] = cat; });
+});
+
+/* ============================================================
+   PURE HELPER FUNCTIONS (unchanged logic from original)
+   ============================================================ */
+function todayKey(offset = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().slice(0, 10);
+}
+function dayTypeFor(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  return WEEK_MAP[d.getDay()];
+}
+function fmtDate(dateStr) {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-IN", {
+    weekday: "long", day: "numeric", month: "short",
+  });
+}
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay();
+  d.setDate(d.getDate() - day);
+  return d.toISOString().slice(0, 10);
+}
+function parseRepRange(str) {
+  const m = String(str).match(/(\d+)(?:-(\d+))?/);
+  if (!m) return { min: 8, max: 12 };
+  const min = parseInt(m[1], 10);
+  const max = m[2] ? parseInt(m[2], 10) : min;
+  return { min, max };
+}
+function extractPairs(sets, sideKey) {
+  const out = [];
+  (sets || []).forEach((s) => {
+    if (!s) return;
+    if (sideKey) {
+      const side = s[sideKey];
+      if (side && side.w !== "" && side.r !== "" && side.w != null && side.r != null) {
+        out.push({ w: Number(side.w), r: Number(side.r) });
+      }
+    } else if (s.w !== "" && s.r !== "" && s.w != null && s.r != null) {
+      out.push({ w: Number(s.w), r: Number(s.r) });
+    }
+  });
+  return out;
+}
+function roundStep(v) { return Math.round(v * 2) / 2; }
+function evaluateSets(pairs, range, increment) {
+  const lastWeight = pairs[pairs.length - 1].w;
+  const minReps = Math.min(...pairs.map((p) => p.r));
+  if (minReps >= range.max) {
+    return { status: "increase-weight", weight: roundStep(lastWeight + increment), reps: range.min, lastWeight, lastReps: minReps };
+  }
+  if (minReps >= range.min) {
+    return { status: "increase-reps", weight: lastWeight, reps: Math.min(minReps + 1, range.max), lastWeight, lastReps: minReps };
+  }
+  return { status: "hold", weight: lastWeight, reps: range.min, lastWeight, lastReps: minReps };
+}
+function checkPlateau(history, sideKey) {
+  const lastN = history.slice(-3);
+  if (lastN.length < 3) return false;
+  const stats = lastN.map((h) => {
+    const pairs = extractPairs(h.sets, sideKey);
+    if (!pairs.length) return null;
+    return { weight: pairs[pairs.length - 1].w, minReps: Math.min(...pairs.map((p) => p.r)) };
+  });
+  if (stats.some((s) => !s)) return false;
+  const sameWeight = stats.every((s) => s.weight === stats[0].weight);
+  const repsNotImproving = stats[2].minReps <= stats[0].minReps;
+  return sameWeight && repsNotImproving;
+}
+function evaluateSideHistory(history, sideKey, range, increment) {
+  if (!history.length) return { status: "no-data" };
+  const last = history[history.length - 1];
+  const pairs = extractPairs(last.sets, sideKey);
+  if (!pairs.length) return { status: "no-data" };
+  const evalNow = evaluateSets(pairs, range, increment);
+  evalNow.plateau = checkPlateau(history, sideKey);
+  return evalNow;
+}
+function buildSuggestion(ex, combinedLogs, excludeDate) {
+  const history = Object.entries(combinedLogs)
+    .filter(([d]) => d !== excludeDate)
+    .filter(([, exs]) => exs && exs[ex.name] && exs[ex.name].length)
+    .map(([d, exs]) => ({ date: d, sets: exs[ex.name] }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const range = parseRepRange(ex.reps);
+  const increment = INCREMENTS[ex.name] || 2.5;
+
+  if (ex.type === "bilateral") {
+    return { type: "bilateral", main: evaluateSideHistory(history, null, range, increment) };
+  }
+  if (ex.type === "left-only") {
+    return { type: "left-only", L: evaluateSideHistory(history, "L", range, increment) };
+  }
+  return {
+    type: "unilateral",
+    L: evaluateSideHistory(history, "L", range, increment),
+    R: evaluateSideHistory(history, "R", range, increment),
+  };
+}
+function computeWeeklyVolume(combinedLogs) {
+  const weeks = {};
+  Object.entries(combinedLogs).forEach(([d, exs]) => {
+    if (!exs) return;
+    const ws = getWeekStart(d);
+    Object.entries(exs).forEach(([exName, sets]) => {
+      const cat = EXERCISE_CATEGORY[exName];
+      if (!cat) return;
+      let vol = 0;
+      (sets || []).forEach((s) => {
+        if (!s) return;
+        if (s.w && s.r) vol += Number(s.w) * Number(s.r);
+        if (s.L && s.L.w && s.L.r) vol += Number(s.L.w) * Number(s.L.r);
+        if (s.R && s.R.w && s.R.r) vol += Number(s.R.w) * Number(s.R.r);
+      });
+      if (!weeks[ws]) weeks[ws] = { week: ws, Push: 0, Pull: 0, Legs: 0 };
+      weeks[ws][cat] += vol;
+    });
+  });
+  return Object.values(weeks).sort((a, b) => a.week.localeCompare(b.week)).slice(-4);
+}
+function computeBalance(weeklyData) {
+  if (!weeklyData.length) return { flag: false };
+  const last = weeklyData[weeklyData.length - 1];
+  const vals = [last.Push, last.Pull, last.Legs];
+  const max = Math.max(...vals);
+  const min = Math.min(...vals);
+  if (max === 0) return { flag: false };
+  if (min < max * 0.6) {
+    const cats = ["Push", "Pull", "Legs"];
+    const minCat = cats[vals.indexOf(min)];
+    return {
+      flag: true,
+      text: `${minCat} volume is noticeably behind the others this week — an illustrative pattern from your logs, not a diagnosis. Consider prioritizing ${minCat.toLowerCase()} a little harder in your next session.`,
+    };
+  }
+  return { flag: false };
+}
+function esc(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/* ============================================================
+   STORAGE (localStorage — synchronous, fully offline)
+   ============================================================ */
+const Store = {
+  get(key) {
+    try {
+      const v = localStorage.getItem(key);
+      return v == null ? null : JSON.parse(v);
+    } catch (e) { return null; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+    catch (e) { return false; }
+  },
+  allWorkoutLogs() {
+    const out = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf("workout:") === 0) {
+        const d = k.replace("workout:", "");
+        const v = Store.get(k);
+        if (v) out[d] = v;
+      }
+    }
+    return out;
+  }
+};
+
+/* ============================================================
+   APP STATE
+   ============================================================ */
+const date = todayKey();
+const dayType = dayTypeFor(date);
+
+const State = {
+  tab: "Status",
+  todayLog: Store.get(`workout:${date}`) || {},
+  allLogs: Store.allWorkoutLogs(),
+  bwHistory: Store.get("bodyweight-history") || [],
+  nutrition: Store.get("nutrition-log") || {},
+  showBackup: false,
+  importMsg: "",
+  levelUpFlash: false,
+  prevLevel: null,
+};
+// make sure today's log is present in allLogs too
+State.allLogs[date] = State.todayLog;
+
+function saveTodayLog(next) {
+  State.todayLog = next;
+  State.allLogs[date] = next;
+  Store.set(`workout:${date}`, next);
+}
+function updateBilateral(exName, idx, field, value) {
+  const next = { ...State.todayLog };
+  const sets = next[exName] ? [...next[exName]] : [];
+  while (sets.length <= idx) sets.push({ w: "", r: "" });
+  sets[idx] = { ...sets[idx], [field]: value };
+  next[exName] = sets;
+  saveTodayLog(next);
+}
+function updateUnilateral(exName, idx, side, field, value) {
+  const next = { ...State.todayLog };
+  const sets = next[exName] ? [...next[exName]] : [];
+  while (sets.length <= idx) sets.push({ L: { w: "", r: "" }, R: { w: "", r: "" } });
+  const set = { ...sets[idx] };
+  set[side] = { ...(set[side] || { w: "", r: "" }), [field]: value };
+  sets[idx] = set;
+  next[exName] = sets;
+  saveTodayLog(next);
+}
+function saveBodyweight() {
+  const input = document.getElementById("bwInput");
+  const val = parseFloat(input.value);
+  if (!val || val <= 0) return;
+  const next = [...State.bwHistory.filter((e) => e.date !== date), { date, weight: val }]
+    .sort((a, b) => a.date.localeCompare(b.date));
+  State.bwHistory = next;
+  Store.set("bodyweight-history", next);
+  render();
+}
+function toggleNutrition(field) {
+  const day = State.nutrition[date] || { protein: false, surplus: false, sleep: false };
+  const next = { ...State.nutrition, [date]: { ...day, [field]: !day[field] } };
+  State.nutrition = next;
+  Store.set("nutrition-log", next);
+  render();
+}
+function handleRestore() {
+  const ta = document.getElementById("importTextArea");
+  try {
+    const parsed = JSON.parse(ta.value);
+    if (parsed.allLogs) {
+      State.allLogs = parsed.allLogs;
+      Object.entries(parsed.allLogs).forEach(([d, log]) => Store.set(`workout:${d}`, log));
+      State.todayLog = parsed.allLogs[date] || State.todayLog;
+    }
+    if (parsed.bwHistory) { State.bwHistory = parsed.bwHistory; Store.set("bodyweight-history", parsed.bwHistory); }
+    if (parsed.nutrition) { State.nutrition = parsed.nutrition; Store.set("nutrition-log", parsed.nutrition); }
+    State.importMsg = "Restored successfully.";
+  } catch (e) {
+    State.importMsg = "That doesn't look like valid backup text — paste the exact text from a previous Copy Backup.";
+  }
+  render();
+}
+function setTab(t) { State.tab = t; render(); }
+function toggleBackup() { State.showBackup = !State.showBackup; render(); }
+
+/* ============================================================
+   DERIVED / COMPUTED VALUES
+   ============================================================ */
+function computeAll() {
+  const combinedLogs = { ...State.allLogs, [date]: State.todayLog };
+
+  let totalXP = 0, totalVolume = 0;
+  const sessionDates = new Set();
+  Object.entries(combinedLogs).forEach(([d, exs]) => {
+    Object.values(exs || {}).forEach((sets) => {
+      (sets || []).forEach((s) => {
+        if (s && s.w && s.r) { totalXP += 10; totalVolume += Number(s.w) * Number(s.r); sessionDates.add(d); }
+        if (s && s.L && s.L.w && s.L.r) { totalXP += 10; totalVolume += Number(s.L.w) * Number(s.L.r); sessionDates.add(d); }
+        if (s && s.R && s.R.w && s.R.r) { totalXP += 10; totalVolume += Number(s.R.w) * Number(s.R.r); sessionDates.add(d); }
+      });
+    });
+  });
+
+  const suggestions = {};
+  Object.values(PLAN).flat().forEach((ex) => { suggestions[ex.name] = buildSuggestion(ex, combinedLogs, date); });
+
+  const weeklyVolume = computeWeeklyVolume(combinedLogs);
+  const balance = computeBalance(weeklyVolume);
+
+  const level = Math.floor(totalXP / 100) + 1;
+  const xpIntoLevel = totalXP % 100;
+  const rank = [...RANKS].reverse().find((r) => level >= r.min) || RANKS[0];
+
+  if (State.prevLevel !== null && level > State.prevLevel) {
+    State.levelUpFlash = true;
+    setTimeout(() => { State.levelUpFlash = false; render(); }, 2400);
+  }
+  State.prevLevel = level;
+
+  const latestBw = State.bwHistory.length ? State.bwHistory[State.bwHistory.length - 1].weight : null;
+  const startBw = State.bwHistory.length ? State.bwHistory[0].weight : null;
+  const bwGain = latestBw && startBw ? latestBw - startBw : 0;
+
+  let streak = 0;
+  for (let i = 0; i < 60; i++) {
+    const dt = todayKey(-i);
+    const dType = dayTypeFor(dt);
+    if (dType === "Rest") continue;
+    if (sessionDates.has(dt)) streak++;
+    else if (i === 0) continue;
+    else break;
+  }
+
+  const STR = Math.min(100, Math.round(totalVolume / 250));
+  const VIT = Math.min(100, Math.round(streak * 8));
+  const END = Math.min(100, Math.round(sessionDates.size * 4));
+  const PHY = Math.min(100, Math.max(0, Math.round(bwGain * 18)));
+
+  const plan = PLAN[dayType] || [];
+  let done = 0, total = 0;
+  plan.forEach((ex) => {
+    const sets = State.todayLog[ex.name] || [];
+    if (ex.type === "bilateral") {
+      total += ex.sets;
+      for (let i = 0; i < ex.sets; i++) if (sets[i] && sets[i].w && sets[i].r) done++;
+    } else if (ex.type === "unilateral") {
+      total += ex.sets * 2;
+      for (let i = 0; i < ex.sets; i++) {
+        const s = sets[i];
+        if (s && s.L && s.L.w && s.L.r) done++;
+        if (s && s.R && s.R.w && s.R.r) done++;
+      }
+    } else if (ex.type === "left-only") {
+      total += ex.sets;
+      for (let i = 0; i < ex.sets; i++) if (sets[i] && sets[i].L && sets[i].L.w && sets[i].L.r) done++;
+    }
+  });
+  const completion = { done, total };
+  const questComplete = total > 0 && done === total;
+
+  return { combinedLogs, totalXP, totalVolume, sessionDates, suggestions, weeklyVolume, balance, level, xpIntoLevel, rank, latestBw, startBw, bwGain, streak, STR, VIT, END, PHY, completion, questComplete };
+}
+
+/* ============================================================
+   UI PRIMITIVES
+   ============================================================ */
+function sysWindow(accent, innerHTML, extraStyle) {
+  return `<div class="sys-window" style="border:1px solid ${accent}55; box-shadow:0 0 0 1px rgba(0,0,0,0.4), 0 0 24px -8px ${accent}66, inset 0 0 40px -20px ${accent}33; ${extraStyle || ""}">
+    <span class="sys-corner" style="top:-1px; left:-1px; border-top:2px solid ${accent}; border-left:2px solid ${accent};"></span>
+    <span class="sys-corner" style="top:-1px; right:-1px; border-top:2px solid ${accent}; border-right:2px solid ${accent};"></span>
+    <span class="sys-corner" style="bottom:-1px; left:-1px; border-bottom:2px solid ${accent}; border-left:2px solid ${accent};"></span>
+    <span class="sys-corner" style="bottom:-1px; right:-1px; border-bottom:2px solid ${accent}; border-right:2px solid ${accent};"></span>
+    ${innerHTML}
+  </div>`;
+}
+function sectionLabel(text, accent) {
+  accent = accent || "#2ED3FF";
+  return `<div class="sys-font" style="font-size:11px; letter-spacing:3px; color:${accent}; margin-bottom:10px; font-weight:700;">${esc(text)}</div>`;
+}
+function statBar(label, value, color) {
+  return `<div style="margin-bottom:12px;">
+    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+      <span class="sys-font" style="font-size:11px; letter-spacing:1.5px; color:#8FA3C4;">${esc(label)}</span>
+      <span class="num" style="font-size:12px; color:${color}; font-weight:700;">${value}</span>
+    </div>
+    <div style="height:6px; background:#0F1830; border-radius:3px; overflow:hidden; border:1px solid #1B2A45;">
+      <div style="height:100%; width:${value}%; background:linear-gradient(90deg, ${color}88, ${color}); box-shadow:0 0 8px ${color}99; transition:width 0.6s ease-out;"></div>
+    </div>
+  </div>`;
+}
+function miniStat(label, value, accent) {
+  return `<div class="mini-stat" style="border:1px solid ${accent}44;">
+    <div class="num" style="font-size:17px; font-weight:700; color:${accent};">${esc(String(value))}</div>
+    <div style="font-size:9px; color:#5E7291; letter-spacing:1px; margin-top:3px;">${esc(label)}</div>
+  </div>`;
+}
+function statusColor(status) {
+  switch (status) {
+    case "increase-weight": return "#4ADE80";
+    case "increase-reps": return "#2ED3FF";
+    case "hold": return "#FFD166";
+    default: return "#5E7291";
+  }
+}
+function statusText(s) {
+  if (s.status === "no-data") return "No history yet — log today as your baseline";
+  if (s.status === "increase-weight") return `\u2191 Weight \u2192 ${s.weight}kg \u00d7 ${s.reps} reps (hit ${s.lastReps} reps @ ${s.lastWeight}kg last time)`;
+  if (s.status === "increase-reps") return `\u2191 Reps \u2192 aim ${s.reps} reps @ ${s.weight}kg (hit ${s.lastReps} last time)`;
+  if (s.status === "hold") return `Hold \u2192 repeat ${s.weight}kg, aim ${s.reps}+ reps (missed target range last time)`;
+  return "";
+}
+function suggestionLine(label, s) {
+  if (!s) return "";
+  let html = `<div style="margin-bottom:4px;">
+    <div style="display:flex; gap:6px; align-items:flex-start;">
+      ${label ? `<span class="num" style="font-size:10px; color:${statusColor(s.status)}; flex-shrink:0; margin-top:1px;">${label}</span>` : ""}
+      <span class="body-font" style="font-size:12px; color:${statusColor(s.status)}; line-height:1.4;">${esc(statusText(s))}</span>
+    </div>`;
+  if (s.plateau) {
+    html += `<div class="body-font" style="font-size:11px; color:#8B6FFF; margin-top:2px;">\u26A0 Plateaued — same weight & reps for 3 sessions straight. Consider a light deload (~10% less weight) or swapping the exercise for a week or two.</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function exerciseSuggestion(suggestion) {
+  if (!suggestion) return "";
+  if (suggestion.type === "bilateral") return suggestionLine(null, suggestion.main);
+  if (suggestion.type === "left-only") return suggestionLine("L", suggestion.L);
+
+  const rankMap = { "no-data": 0, hold: 1, "increase-reps": 2, "increase-weight": 3 };
+  const rL = rankMap[suggestion.L.status] ?? 0;
+  const rR = rankMap[suggestion.R.status] ?? 0;
+  const asymmetry = suggestion.L.status !== "no-data" && suggestion.R.status !== "no-data" && rL !== rR;
+  const weakerSide = rL < rR ? "left" : "right";
+  let html = `<div>${suggestionLine("L", suggestion.L)}${suggestionLine("R", suggestion.R)}`;
+  if (asymmetry) {
+    html += `<div class="body-font" style="font-size:11px; color:#FF9F5A; margin-top:2px;">Pace by the ${weakerSide} side — hold both there until it catches up, then progress together.</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+/* ============================================================
+   HAND-ROLLED SVG CHARTS (no chart library — fully offline)
+   ============================================================ */
+function barChart(weeklyVolume) {
+  const w = 320, h = 190, padL = 30, padB = 20, padT = 10, padR = 10;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const maxVal = Math.max(1, ...weeklyVolume.flatMap(d => [d.Push, d.Pull, d.Legs]));
+  const groupW = plotW / weeklyVolume.length;
+  const barW = groupW / 4;
+  const colors = { Push: "#2ED3FF", Pull: "#8B6FFF", Legs: "#FFD166" };
+  let bars = "";
+  weeklyVolume.forEach((d, gi) => {
+    ["Push", "Pull", "Legs"].forEach((cat, ci) => {
+      const val = d[cat] || 0;
+      const barH = (val / maxVal) * plotH;
+      const x = padL + gi * groupW + ci * barW + barW * 0.15;
+      const y = padT + plotH - barH;
+      bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(barW*0.7).toFixed(1)}" height="${barH.toFixed(1)}" fill="${colors[cat]}" rx="1"/>`;
+    });
+  });
+  let gridLines = "";
+  for (let i = 0; i <= 3; i++) {
+    const y = padT + (plotH / 3) * i;
+    gridLines += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="#1B2A45" stroke-dasharray="3 3"/>`;
+  }
+  let labels = "";
+  weeklyVolume.forEach((d, gi) => {
+    const x = padL + gi * groupW + groupW / 2;
+    labels += `<text x="${x.toFixed(1)}" y="${h - 4}" fill="#5E7291" font-size="9" text-anchor="middle">${esc(d.week.slice(5))}</text>`;
+  });
+  const legend = `
+    <span style="display:inline-flex; align-items:center; gap:4px; margin-right:12px;"><span style="width:8px;height:8px;background:#2ED3FF;display:inline-block;border-radius:1px;"></span><span style="font-size:10px;color:#8FA3C4;">Push</span></span>
+    <span style="display:inline-flex; align-items:center; gap:4px; margin-right:12px;"><span style="width:8px;height:8px;background:#8B6FFF;display:inline-block;border-radius:1px;"></span><span style="font-size:10px;color:#8FA3C4;">Pull</span></span>
+    <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px;height:8px;background:#FFD166;display:inline-block;border-radius:1px;"></span><span style="font-size:10px;color:#8FA3C4;">Legs</span></span>`;
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:190px; display:block;">${gridLines}${bars}${labels}</svg>
+    <div style="text-align:center; margin-top:6px;">${legend}</div>`;
+}
+function lineChart(history) {
+  const w = 320, h = 200, padL = 32, padB = 22, padT = 10, padR = 12;
+  const plotW = w - padL - padR, plotH = h - padT - padB;
+  const vals = history.map(h2 => h2.weight);
+  const minV = Math.min(...vals) - 1, maxV = Math.max(...vals) + 1;
+  const range = maxV - minV || 1;
+  const pts = history.map((d, i) => {
+    const x = padL + (i / (history.length - 1)) * plotW;
+    const y = padT + plotH - ((d.weight - minV) / range) * plotH;
+    return { x, y, d };
+  });
+  const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+  let gridLines = "";
+  for (let i = 0; i <= 3; i++) {
+    const y = padT + (plotH / 3) * i;
+    gridLines += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="#1B2A45" stroke-dasharray="3 3"/>`;
+  }
+  const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#2ED3FF"/>`).join("");
+  let labels = "";
+  const step = Math.max(1, Math.floor(pts.length / 5));
+  pts.forEach((p, i) => {
+    if (i % step === 0 || i === pts.length - 1) {
+      labels += `<text x="${p.x.toFixed(1)}" y="${h - 4}" fill="#5E7291" font-size="9" text-anchor="middle">${esc(p.d.date.slice(5))}</text>`;
+    }
+  });
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:200px; display:block;">
+    ${gridLines}
+    <path d="${pathD}" fill="none" stroke="#2ED3FF" stroke-width="2"/>
+    ${dots}
+    ${labels}
+  </svg>`;
+}
+
+/* ============================================================
+   TAB RENDERERS
+   ============================================================ */
+function renderStatusTab(c) {
+  const backupData = { allLogs: c.combinedLogs, bwHistory: State.bwHistory, nutrition: State.nutrition };
+  const backupText = JSON.stringify(backupData);
+  let html = "";
+
+  html += sysWindow(c.rank.color, `
+    ${sectionLabel("STATUS WINDOW", c.rank.color)}
+    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:12px;">
+      <div class="sys-font glow-text" style="font-size:44px; font-weight:900; line-height:1;">Lv.${c.level}</div>
+      <div style="flex:1;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+          <span style="font-size:10px; color:#5E7291;">XP TO NEXT LEVEL</span>
+          <span class="num" style="font-size:10px; color:#5E7291;">${c.xpIntoLevel}/100</span>
+        </div>
+        <div style="height:8px; background:#0F1830; border-radius:4px; overflow:hidden; border:1px solid #1B2A45;">
+          <div style="height:100%; width:${c.xpIntoLevel}%; background:linear-gradient(90deg,#2ED3FF88,#2ED3FF); box-shadow:0 0 10px #2ED3FF99; transition:width 0.6s ease-out;"></div>
+        </div>
+      </div>
+    </div>
+    ${statBar("STRENGTH", c.STR, "#2ED3FF")}
+    ${statBar("VITALITY (STREAK)", c.VIT, "#4ADE80")}
+    ${statBar("ENDURANCE (SESSIONS)", c.END, "#8B6FFF")}
+    ${statBar("PHYSIQUE (MASS GAINED)", c.PHY, "#FFD166")}
+    <p class="body-font" style="font-size:11px; color:#5E7291; margin-top:8px; line-height:1.5;">Stats are a gamified read of your logged training data — not a clinical measurement of your actual strength or fitness.</p>
+  `, "margin-bottom:16px;");
+
+  html += `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+    ${miniStat("STREAK", `${c.streak}d`, "#4ADE80")}
+    ${miniStat("SESSIONS", c.sessionDates.size, "#2ED3FF")}
+    ${miniStat("VOLUME", `${Math.round(c.totalVolume / 1000)}k`, "#8B6FFF")}
+  </div>`;
+
+  html += sysWindow("#5E7291", `
+    ${sectionLabel("HUNTER LOG", "#8FA3C4")}
+    <p class="body-font" style="font-size:13px; color:#B8C7DE; line-height:1.6; margin:0;">
+      Every completed set feeds this window, and the <b>INTEL</b> tab reads your history to tell you exactly when to add weight, add reps, or hold. Go to <b>QUESTS</b> to log today's session.
+    </p>
+  `, "margin-top:16px;");
+
+  const importMsgHtml = State.importMsg
+    ? `<div class="body-font" style="font-size:12px; color:#4ADE80; margin-top:8px;">${esc(State.importMsg)}</div>` : "";
+
+  html += sysWindow("#FF9F5A", `
+    ${sectionLabel("DATA BACKUP", "#FF9F5A")}
+    <p class="body-font" style="font-size:12px; color:#B8C7DE; line-height:1.5; margin:0 0 10px;">
+      Your data now saves locally on this device automatically — no internet needed. Use this only if you want to move your data to another device or browser.
+    </p>
+    <button onclick="toggleBackup()" class="sys-font" style="background:transparent; border:1px solid #FF9F5A; border-radius:2px; color:#FF9F5A; font-size:11px; letter-spacing:1px; padding:8px 14px; cursor:pointer; margin-bottom:10px;">
+      ${State.showBackup ? "HIDE BACKUP TEXT" : "SHOW BACKUP TEXT"}
+    </button>
+    ${State.showBackup ? `
+      <div>
+        <div style="font-size:10px; color:#5E7291; margin-bottom:4px;">COPY THIS (tap, select all, copy):</div>
+        <textarea readonly onfocus="this.select()" style="width:100%; height:70px; background:#080B12; border:1px solid #1B2A45; border-radius:2px; color:#8FA3C4; font-size:10px; padding:8px; font-family:'SF Mono',Consolas,monospace; margin-bottom:12px;">${esc(backupText)}</textarea>
+        <div style="font-size:10px; color:#5E7291; margin-bottom:4px;">PASTE BACKUP TO RESTORE:</div>
+        <textarea id="importTextArea" placeholder="Paste previously copied backup text here" style="width:100%; height:70px; background:#080B12; border:1px solid #1B2A45; border-radius:2px; color:#DCEFFF; font-size:10px; padding:8px; font-family:'SF Mono',Consolas,monospace; margin-bottom:8px;"></textarea>
+        <button onclick="handleRestore()" class="sys-font" style="background:#FF9F5A; border:none; border-radius:2px; color:#05070C; font-weight:700; font-size:11px; letter-spacing:1px; padding:8px 16px; cursor:pointer;">RESTORE</button>
+        ${importMsgHtml}
+      </div>
+    ` : ""}
+  `, "margin-top:16px;");
+
+  return html;
+}
+
+function renderExerciseCard(ex, suggestion) {
+  const sets = State.todayLog[ex.name] || [];
+  const isBilateral = ex.type === "bilateral";
+  const isLeftOnly = ex.type === "left-only";
+  const noteHtml = ex.note ? `<div style="display:inline-block; font-size:10px; color:#FFD166; letter-spacing:0.5px; background:#1F1A0E; border:1px solid #4A3F1E; border-radius:2px; padding:2px 8px; margin-bottom:8px;">${esc(ex.note.toUpperCase())}</div>` : "";
+  const suggHtml = suggestion ? `<div style="border:1px solid #131E33; border-left:2px solid #2ED3FF; border-radius:2px; padding:8px 10px; margin-bottom:10px; background:#080D18;">
+      <div class="sys-font" style="font-size:9px; letter-spacing:1.5px; color:#5E7291; margin-bottom:4px;">SYSTEM SUGGESTS</div>
+      ${exerciseSuggestion(suggestion)}
+    </div>` : "";
+
+  let rowsHtml = "";
+  if (isBilateral) {
+    let rows = "";
+    for (let i = 0; i < ex.sets; i++) {
+      const s = sets[i] || { w: "", r: "" };
+      rows += `<div style="display:grid; grid-template-columns:16px 1fr 12px 1fr; gap:6px; align-items:center;">
+        <span class="num" style="font-size:11px; color:#5E7291;">${i + 1}</span>
+        <input type="number" inputmode="decimal" placeholder="kg" class="num input-cell" value="${s.w === "" || s.w == null ? "" : s.w}" data-ex="${esc(ex.name)}" data-idx="${i}" data-field="w" data-mode="bilateral">
+        <span style="color:#3A4A6A; text-align:center;">×</span>
+        <input type="number" inputmode="numeric" placeholder="reps" class="num input-cell" value="${s.r === "" || s.r == null ? "" : s.r}" data-ex="${esc(ex.name)}" data-idx="${i}" data-field="r" data-mode="bilateral">
+      </div>`;
+    }
+    rowsHtml = `<div style="display:flex; flex-direction:column; gap:6px;">${rows}</div>`;
+  } else if (ex.type === "unilateral") {
+    let rows = "";
+    for (let i = 0; i < ex.sets; i++) {
+      const s = sets[i] || { L: { w: "", r: "" }, R: { w: "", r: "" } };
+      let sideRows = "";
+      ["L", "R"].forEach((side) => {
+        const sv = s[side] || { w: "", r: "" };
+        sideRows += `<div style="display:grid; grid-template-columns:16px 1fr 12px 1fr; gap:6px; align-items:center; margin-bottom:4px;">
+          <span class="num" style="font-size:11px; color:${side === "L" ? "#2ED3FF" : "#8B6FFF"};">${side}</span>
+          <input type="number" inputmode="decimal" placeholder="kg" class="num input-cell" value="${sv.w === "" || sv.w == null ? "" : sv.w}" data-ex="${esc(ex.name)}" data-idx="${i}" data-side="${side}" data-field="w" data-mode="unilateral">
+          <span style="color:#3A4A6A; text-align:center;">×</span>
+          <input type="number" inputmode="numeric" placeholder="reps" class="num input-cell" value="${sv.r === "" || sv.r == null ? "" : sv.r}" data-ex="${esc(ex.name)}" data-idx="${i}" data-side="${side}" data-field="r" data-mode="unilateral">
+        </div>`;
+      });
+      rows += `<div style="border:1px solid #131E33; border-radius:2px; padding:8px;">
+        <div class="num" style="font-size:10px; color:#5E7291; margin-bottom:5px;">SET ${i + 1}</div>
+        ${sideRows}
+      </div>`;
+    }
+    rowsHtml = `<div style="display:flex; flex-direction:column; gap:8px;">${rows}</div>`;
+  } else if (isLeftOnly) {
+    let rows = "";
+    for (let i = 0; i < ex.sets; i++) {
+      const s = sets[i] || { L: { w: "", r: "" } };
+      const sv = s.L || { w: "", r: "" };
+      rows += `<div style="display:grid; grid-template-columns:16px 1fr 12px 1fr; gap:6px; align-items:center;">
+        <span class="num" style="font-size:11px; color:#2ED3FF;">L</span>
+        <input type="number" inputmode="decimal" placeholder="kg" class="num input-cell" value="${sv.w === "" || sv.w == null ? "" : sv.w}" data-ex="${esc(ex.name)}" data-idx="${i}" data-side="L" data-field="w" data-mode="unilateral">
+        <span style="color:#3A4A6A; text-align:center;">×</span>
+        <input type="number" inputmode="numeric" placeholder="reps" class="num input-cell" value="${sv.r === "" || sv.r == null ? "" : sv.r}" data-ex="${esc(ex.name)}" data-idx="${i}" data-side="L" data-field="r" data-mode="unilateral">
+      </div>`;
+    }
+    rowsHtml = `<div style="display:flex; flex-direction:column; gap:6px;">${rows}</div>`;
+  }
+
+  return sysWindow("#1B2A45", `
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+      <h3 class="body-font" style="margin:0; font-size:15px; font-weight:700; color:#DCEFFF;">${esc(ex.name)}</h3>
+      <span class="num" style="font-size:11px; color:#5E7291;">${ex.sets}×${esc(ex.reps)}</span>
+    </div>
+    ${noteHtml}
+    ${suggHtml}
+    ${rowsHtml}
+  `, "margin-bottom:10px; padding:14px;");
+}
+
+function renderQuestsTab(c) {
+  if (dayType === "Rest") {
+    return sysWindow("#4ADE80", `
+      ${sectionLabel("RECOVERY QUEST", "#4ADE80")}
+      <div class="sys-font" style="font-size:20px; font-weight:900; margin-bottom:8px;">NO DUNGEON TODAY</div>
+      <p class="body-font" style="font-size:14px; color:#B8C7DE; line-height:1.6;">
+        Rest days are still part of the quest. Sleep 7-8 hours and hit your calorie target — check them off under the <b>RECOVERY</b> tab. This is when the System actually builds new stats.
+      </p>
+    `);
+  }
+  const plan = PLAN[dayType] || [];
+  let html = sysWindow(c.questComplete ? "#4ADE80" : "#2ED3FF", `
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        ${sectionLabel(c.questComplete ? "QUEST COMPLETE" : "DAILY QUEST", c.questComplete ? "#4ADE80" : "#2ED3FF")}
+        <div class="sys-font" style="font-size:18px; font-weight:900;">${dayType.toUpperCase()} DAY</div>
+      </div>
+      <div class="num" style="font-size:15px; color:${c.questComplete ? "#4ADE80" : "#8FA3C4"};">${c.completion.done}/${c.completion.total}</div>
+    </div>
+  `, "margin-bottom:14px;");
+
+  plan.forEach((ex) => { html += renderExerciseCard(ex, c.suggestions[ex.name]); });
+  return html;
+}
+
+function renderIntelTab(c) {
+  const hasData = c.weeklyVolume.length > 0;
+  let html = sysWindow("#8B6FFF", `
+    ${sectionLabel("WEEKLY VOLUME BY SPLIT", "#8B6FFF")}
+    ${hasData ? barChart(c.weeklyVolume) : `<p class="body-font" style="color:#5E7291; font-size:13px; text-align:center; padding:20px 0;">Log a few sessions to see your split balance here.</p>`}
+  `, "margin-bottom:14px;");
+
+  if (c.balance.flag) {
+    html += sysWindow("#FF9F5A", `
+      ${sectionLabel("BALANCE FLAG", "#FF9F5A")}
+      <p class="body-font" style="font-size:13px; color:#DCEFFF; margin:0; line-height:1.5;">${esc(c.balance.text)}</p>
+    `, "margin-bottom:14px;");
+  }
+
+  ["Push", "Pull", "Legs"].forEach((cat) => {
+    const accent = cat === "Push" ? "#2ED3FF" : cat === "Pull" ? "#8B6FFF" : "#FFD166";
+    html += `<div style="margin-bottom:6px;">${sectionLabel(cat.toUpperCase() + " — PROGRESSION", accent)}`;
+    PLAN[cat].forEach((ex) => {
+      html += sysWindow("#1B2A45", `
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span class="body-font" style="font-size:14px; font-weight:700;">${esc(ex.name)}</span>
+          <span class="num" style="font-size:10px; color:#5E7291;">${esc(ex.reps)} target</span>
+        </div>
+        ${exerciseSuggestion(c.suggestions[ex.name])}
+      `, "margin-bottom:10px; padding:12px 14px;");
+    });
+    html += `</div>`;
+  });
+
+  html += `<p class="body-font" style="font-size:11px; color:#5E7291; margin-top:4px; line-height:1.6;">
+    Suggestions use double-progression logic on your last logged session for each exercise: hit the top of the rep range on every set → add weight; land inside the range → add a rep; miss the bottom of the range → hold and repeat. It's a starting recommendation, not a command — you know your body and gym on any given day.
+  </p>`;
+  return html;
+}
+
+function renderGrowthTab(c) {
+  const history = State.bwHistory;
+  let html = sysWindow("#FFD166", `
+    ${sectionLabel("MASS TRACKING", "#FFD166")}
+    <div style="display:flex; gap:8px;">
+      <input id="bwInput" type="number" inputmode="decimal" placeholder="Today's weight (kg)" class="num input-cell" style="flex:1; text-align:left;">
+      <button onclick="saveBodyweight()" class="sys-font" style="background:#FFD166; border:none; border-radius:2px; color:#05070C; font-weight:700; padding:0 18px; font-size:12px; letter-spacing:1px; cursor:pointer;">LOG</button>
+    </div>
+  `, "margin-bottom:16px;");
+
+  if (history.length > 0) {
+    html += `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px;">
+      ${miniStat("LATEST", `${c.latestBw}kg`, "#DCEFFF")}
+      ${miniStat("GAINED", `${c.bwGain > 0 ? "+" : ""}${c.bwGain.toFixed(1)}kg`, c.bwGain >= 0 ? "#4ADE80" : "#FF9F9F")}
+      ${miniStat("ENTRIES", history.length, "#8FA3C4")}
+    </div>`;
+  }
+
+  html += sysWindow("#2ED3FF", `
+    ${sectionLabel("GROWTH CURVE", "#2ED3FF")}
+    ${history.length >= 2 ? lineChart(history) : `<p class="body-font" style="color:#5E7291; font-size:13px; text-align:center; padding:24px 0;">Log at least 2 entries to reveal your growth curve.</p>`}
+  `);
+
+  html += `<p class="body-font" style="font-size:12px; color:#5E7291; margin-top:14px; line-height:1.6;">
+    Target: ~0.5–1kg gain per month. Flat for 2-3 weeks straight means your surplus isn't big enough — raise calories, not just training volume.
+  </p>`;
+  return html;
+}
+
+function renderRecoveryTab() {
+  const today = State.nutrition[date] || {};
+  const items = [
+    { key: "protein", label: "Protein target hit (130–150g)", hint: "eggs, paneer, chicken, dal, curd, whey" },
+    { key: "surplus", label: "Ate in a calorie surplus", hint: "4-5 meals across the day" },
+    { key: "sleep", label: "Slept 7-8 hours", hint: "recovery window — non-negotiable" },
+  ];
+  const allDone = items.every((it) => today[it.key]);
+
+  let html = sysWindow(allDone ? "#4ADE80" : "#8B6FFF", `
+    ${sectionLabel(allDone ? "RECOVERY COMPLETE" : "RECOVERY CHECKLIST", allDone ? "#4ADE80" : "#8B6FFF")}
+    <p class="body-font" style="font-size:13px; color:#B8C7DE; margin:0; line-height:1.5;">This is where STR and PHYSIQUE stats actually get built — training only creates the demand.</p>
+  `, "margin-bottom:14px;");
+
+  items.forEach((it) => {
+    const checked = !!today[it.key];
+    html += `<button onclick="toggleNutrition('${it.key}')" class="checklist-btn" style="border:1px solid ${checked ? "#4ADE80" : "#1B2A45"};">
+      <div style="width:20px; height:20px; border-radius:3px; flex-shrink:0; background:${checked ? "#4ADE80" : "transparent"}; border:1px solid ${checked ? "#4ADE80" : "#3A4A6A"}; display:flex; align-items:center; justify-content:center;">
+        ${checked ? `<span style="color:#05070C; font-size:13px; font-weight:700;">✓</span>` : ""}
+      </div>
+      <div>
+        <div class="body-font" style="font-size:14px; font-weight:700; color:#DCEFFF;">${esc(it.label)}</div>
+        <div style="font-size:12px; color:#5E7291; margin-top:2px;">${esc(it.hint)}</div>
+      </div>
+    </button>`;
+  });
+  return html;
+}
+
+/* ============================================================
+   TOP-LEVEL RENDER
+   ============================================================ */
+function render() {
+  const c = computeAll();
+  const tabs = ["Status", "Quests", "Intel", "Growth", "Recovery"];
+  let body;
+  if (State.tab === "Status") body = renderStatusTab(c);
+  else if (State.tab === "Quests") body = renderQuestsTab(c);
+  else if (State.tab === "Intel") body = renderIntelTab(c);
+  else if (State.tab === "Growth") body = renderGrowthTab(c);
+  else body = renderRecoveryTab();
+
+  const navHtml = tabs.map(t => `<button class="tab-btn sys-font" onclick="setTab('${t}')" style="border-bottom:${State.tab === t ? "2px solid #2ED3FF" : "2px solid transparent"}; color:${State.tab === t ? "#DCEFFF" : "#5E7291"};">${t.toUpperCase()}</button>`).join("");
+
+  const levelUpHtml = State.levelUpFlash ? `
+    <div style="position:fixed; top:18%; left:50%; transform:translateX(-50%); z-index:50; text-align:center; animation:popIn 0.4s ease-out; pointer-events:none;">
+      <div class="sys-font glow-text" style="font-size:13px; letter-spacing:4px; color:#2ED3FF;">LEVEL UP</div>
+      <div class="sys-font" style="font-size:48px; font-weight:900; color:#DCEFFF; text-shadow:0 0 30px #2ED3FF;">${c.level}</div>
+    </div>` : "";
+
+  document.getElementById("app").innerHTML = `
+    <div style="min-height:100vh; background:radial-gradient(ellipse at 50% -10%, #0D1830 0%, #05070C 55%); color:#DCEFFF; padding-bottom:50px;">
+      ${levelUpHtml}
+      <header style="padding:26px 18px 16px; border-bottom:1px solid #1B2A45;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div class="sys-font" style="font-size:10px; letter-spacing:3px; color:#5E7291;">THE SYSTEM</div>
+            <h1 class="sys-font glow-text" style="margin:2px 0 0; font-size:26px; font-weight:900; letter-spacing:1px;">HUNTER: ${esc(HUNTER_NAME.toUpperCase())}</h1>
+          </div>
+          <div style="text-align:right;">
+            <div class="sys-font" style="font-size:20px; font-weight:900; color:${c.rank.color}; text-shadow:0 0 14px ${c.rank.color}88;">${c.rank.label}</div>
+            <div style="font-size:10px; color:#5E7291; letter-spacing:1px;">RANK</div>
+          </div>
+        </div>
+        <div style="font-size:12px; color:#5E7291; margin-top:6px;">${esc(fmtDate(date))}</div>
+      </header>
+
+      <nav style="display:flex; border-bottom:1px solid #1B2A45; background:#080B12;">${navHtml}</nav>
+
+      <main style="padding:18px;">${body}</main>
+    </div>
+  `;
+  attachInputListeners();
+}
+
+function attachInputListeners() {
+  document.querySelectorAll('input[data-ex]').forEach((input) => {
+    input.addEventListener('change', (e) => {
+      const el = e.target;
+      const exName = el.getAttribute('data-ex');
+      const idx = parseInt(el.getAttribute('data-idx'), 10);
+      const field = el.getAttribute('data-field');
+      const mode = el.getAttribute('data-mode');
+      const value = el.value;
+      if (mode === 'bilateral') {
+        updateBilateral(exName, idx, field, value);
+      } else {
+        const side = el.getAttribute('data-side');
+        updateUnilateral(exName, idx, side, field, value);
+      }
+      render();
+    });
+  });
+}
+
+render();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(function () {});
+  });
+}
+</script>
+
+</body>
+</html>
