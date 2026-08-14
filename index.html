@@ -69,46 +69,44 @@ const PLAN = {
     { name: "Incline Dumbbell Press", sets: 3, reps: "6-10", type: "unilateral", note: "~30° incline • upper-chest bias • left arm first" },
     { name: "Barbell Bench Press", sets: 3, reps: "6-10", type: "bilateral" },
     { name: "Lateral Raises", sets: 4, reps: "10-20", type: "bilateral", note: "Controlled • no swinging" },
-    { name: "Cable Fly", sets: 2, reps: "10-15", type: "bilateral", note: "Full comfortable ROM" },
     { name: "Overhead Cable Triceps Extension", sets: 3, reps: "8-15", type: "bilateral", note: "Long-head emphasis" },
   ],
   "Pull A": [
     { name: "Pull-ups / Lat Pulldown", sets: 3, reps: "6-10", type: "bilateral", note: "Drive elbows down • full ROM" },
     { name: "Chest-Supported Row", sets: 3, reps: "8-12", type: "bilateral" },
-    { name: "Single-Arm DB Row", sets: 2, reps: "8-12", type: "unilateral", note: "Left arm first" },
+    { name: "Single-Arm DB Row", sets: 3, reps: "8-12", type: "unilateral", note: "Left arm first" },
     { name: "Face Pulls", sets: 2, reps: "12-20", type: "bilateral" },
     { name: "Dumbbell Curl", sets: 3, reps: "8-12", type: "unilateral", note: "Left arm first" },
     { name: "Hammer Curl", sets: 2, reps: "10-15", type: "bilateral" },
   ],
   "Legs A": [
     { name: "Squat", sets: 3, reps: "6-10", type: "bilateral" },
-    { name: "45° Back Extension", sets: 3, reps: "6-10", type: "bilateral", note: "Controlled stretch • neutral spine" },
-    { name: "Leg Extension", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "45° Back Extension", sets: 3, reps: "8-12", type: "bilateral", note: "Controlled stretch • neutral spine" },
+    { name: "Leg Extension", sets: 3, reps: "10-15", type: "bilateral" },
     { name: "Seated Leg Curl", sets: 3, reps: "8-15", type: "bilateral", note: "Long-length hamstring bias" },
     { name: "Calf Raises", sets: 3, reps: "8-15", type: "bilateral", note: "Deep stretch • full plantarflexion" },
     { name: "Cable Crunch", sets: 3, reps: "10-15", type: "bilateral" },
   ],
   "Push B": [
     { name: "Barbell Bench Press", sets: 3, reps: "6-10", type: "bilateral" },
-    { name: "Incline Dumbbell Press", sets: 2, reps: "8-12", type: "unilateral", note: "~30° incline • left arm first" },
+    { name: "Incline Dumbbell Press", sets: 3, reps: "8-12", type: "unilateral", note: "~30° incline • left arm first" },
     { name: "Lateral Raises", sets: 4, reps: "10-20", type: "bilateral", note: "Controlled • no swinging" },
-    { name: "Dumbbell Overhead Press", sets: 2, reps: "8-12", type: "bilateral" },
-    { name: "Cable Fly", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Dumbbell Overhead Press", sets: 3, reps: "8-12", type: "bilateral" },
     { name: "Triceps Pushdown / Dips", sets: 3, reps: "10-15", type: "bilateral" },
   ],
   "Pull B": [
     { name: "Neutral-Grip Lat Pulldown", sets: 3, reps: "8-12", type: "bilateral", note: "Lat-focused • don't chase grip width" },
     { name: "Barbell Row", sets: 3, reps: "6-10", type: "bilateral" },
-    { name: "Straight-Arm Pulldown", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Straight-Arm Pulldown", sets: 3, reps: "10-15", type: "bilateral" },
     { name: "Face Pulls", sets: 2, reps: "12-20", type: "bilateral" },
     { name: "Preacher Curl", sets: 3, reps: "8-12", type: "bilateral" },
     { name: "Hammer Curl", sets: 2, reps: "10-15", type: "bilateral" },
   ],
   "Legs B": [
     { name: "Leg Press", sets: 3, reps: "8-12", type: "bilateral" },
-    { name: "Bulgarian Split Squat", sets: 2, reps: "8-12", type: "unilateral", note: "Left leg first" },
+    { name: "Bulgarian Split Squat", sets: 3, reps: "8-12", type: "unilateral", note: "Left leg first" },
     { name: "Seated Leg Curl", sets: 3, reps: "8-15", type: "bilateral" },
-    { name: "Leg Extension", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Leg Extension", sets: 3, reps: "10-15", type: "bilateral" },
     { name: "Calf Raises", sets: 3, reps: "8-15", type: "bilateral" },
     { name: "Hanging Leg Raise", sets: 3, reps: "8-15", type: "bilateral" },
   ],
@@ -934,36 +932,11 @@ function render() {
   document.getElementById("app").innerHTML = `
     <div style="min-height:100vh; background:radial-gradient(ellipse at 50% -10%, #0D1830 0%, #05070C 55%); color:#DCEFFF; padding-bottom:50px;">
       ${levelUpHtml}
-      <header style="padding:18px 18px 16px; border-bottom:1px solid #1B2A45;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
-          <div style="display:flex; align-items:center; gap:12px; min-width:0;">
-            <div aria-label="HUNTER SYSTEM logo" style="width:58px; height:58px; flex:0 0 58px; position:relative; border-radius:16px; overflow:hidden; border:1px solid rgba(139,111,255,.9); box-shadow:0 0 22px rgba(139,111,255,.35), inset 0 0 18px rgba(46,211,255,.08); background:radial-gradient(circle at 50% 42%, #24134f 0%, #090713 62%, #05070C 100%);">
-  <svg viewBox="0 0 100 100" width="58" height="58" role="img" aria-hidden="true">
-    <defs>
-      <linearGradient id="hunterGlow" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#D9B7FF"/>
-        <stop offset="45%" stop-color="#9B5CFF"/>
-        <stop offset="100%" stop-color="#2ED3FF"/>
-      </linearGradient>
-      <filter id="hunterBlur"><feGaussianBlur stdDeviation="2.2"/></filter>
-    </defs>
-    <circle cx="50" cy="46" r="35" fill="none" stroke="#8B6FFF" stroke-opacity=".25" stroke-width="2"/>
-    <circle cx="50" cy="46" r="30" fill="none" stroke="#2ED3FF" stroke-opacity=".25" stroke-width="1"/>
-    <path d="M50 14 L57 25 L70 19 L67 33 L82 38 L68 45 L75 58 L60 55 L50 70 L40 55 L25 58 L32 45 L18 38 L33 33 L30 19 L43 25 Z"
-          fill="#070611" stroke="url(#hunterGlow)" stroke-width="2"/>
-    <path d="M39 39 L47 42 L50 39 L53 42 L61 39 L57 49 L50 54 L43 49 Z"
-          fill="#120A24" stroke="#B77CFF" stroke-width="1.5"/>
-    <path d="M41 43 L47 45 M59 43 L53 45" stroke="#D9B7FF" stroke-width="2" stroke-linecap="round"/>
-    <path d="M50 52 L46 61 L50 58 L54 61 Z" fill="#8B6FFF"/>
-    <path d="M23 76 L35 67 L43 82 L50 73 L57 82 L65 67 L77 76"
-          fill="none" stroke="#2ED3FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="50" cy="46" r="38" fill="none" stroke="#8B6FFF" stroke-opacity=".18" stroke-width="5" filter="url(#hunterBlur)"/>
-  </svg>
-</div>
-<div style="min-width:0;">
-              <div class="sys-font" style="font-size:10px; letter-spacing:3px; color:#8B6FFF;">THE SYSTEM</div>
-              <h1 class="sys-font glow-text" style="margin:2px 0 0; font-size:22px; font-weight:900; letter-spacing:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">HUNTER: ${esc(HUNTER_NAME.toUpperCase())}</h1>
-            </div>
+      <header style="padding:26px 18px 16px; border-bottom:1px solid #1B2A45;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div class="sys-font" style="font-size:10px; letter-spacing:3px; color:#5E7291;">THE SYSTEM</div>
+            <h1 class="sys-font glow-text" style="margin:2px 0 0; font-size:26px; font-weight:900; letter-spacing:1px;">HUNTER: ${esc(HUNTER_NAME.toUpperCase())}</h1>
           </div>
           <div style="text-align:right;">
             <div class="sys-font" style="font-size:20px; font-weight:900; color:${c.rank.color}; text-shadow:0 0 14px ${c.rank.color}88;">${c.rank.label}</div>
