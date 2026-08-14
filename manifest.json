@@ -2,7 +2,7 @@
   "id": "./",
   "name": "HUNTER: SYSTEM",
   "short_name": "HUNTER",
-  "description": "HUNTER workout and progression tracker.",
+  "description": "Evidence-informed aesthetic physique training and progression tracker.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

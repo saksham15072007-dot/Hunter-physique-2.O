@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#05070C">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png" type="image/png">
 <title>HUNTER: SYSTEM</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -34,19 +39,24 @@
   .tab-btn { flex: 1; padding: 13px 0; background: transparent; border: none; font-size: 9.5px; letter-spacing: 1px; font-weight: 700; cursor: pointer; }
   .mini-stat { background: #0C1220; border-radius: 2px; padding: 12px 8px; text-align: center; }
   .checklist-btn { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; background: #0C1220; border-radius: 2px; padding: 14px; margin-bottom: 10px; cursor: pointer; }
+
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; background:radial-gradient(circle at 20% 10%, rgba(46,211,255,.09), transparent 28%), radial-gradient(circle at 85% 30%, rgba(139,111,255,.08), transparent 30%); }
+  body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; opacity:.18; background-image:linear-gradient(rgba(46,211,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(46,211,255,.06) 1px,transparent 1px); background-size:34px 34px; mask-image:linear-gradient(to bottom,black,transparent 80%); }
+  @keyframes scan { 0%{transform:translateY(-100%);opacity:0} 15%{opacity:.7} 80%{opacity:.15} 100%{transform:translateY(100vh);opacity:0} }
+  @keyframes pulseGlow { 0%,100%{box-shadow:0 0 0 rgba(46,211,255,0)} 50%{box-shadow:0 0 24px rgba(46,211,255,.12)} }
+  @keyframes floatIn { from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .hunter-scan { position:fixed; left:0; right:0; top:0; height:2px; background:linear-gradient(90deg,transparent,#2ED3FF,transparent); animation:scan 6s linear infinite; z-index:100; pointer-events:none; }
+  .sys-window { border:1px solid rgba(46,211,255,.12); background:linear-gradient(145deg,rgba(12,18,32,.96),rgba(5,9,17,.96)); overflow:hidden; animation:floatIn .35s ease both; }
+  .sys-window:hover { animation:pulseGlow 2s ease-in-out infinite; }
+  .tab-btn { text-transform:uppercase; transition:all .2s ease; }
+  .tab-btn:active { transform:scale(.96); }
+  .aesthetic-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid #1B2A45; background:#09101d; padding:6px 9px; border-radius:999px; font-size:9px; letter-spacing:1.2px; color:#9FB5D4; }
+  .boss-card { background:linear-gradient(135deg,rgba(46,211,255,.10),rgba(139,111,255,.06) 50%,rgba(255,209,102,.05)); border:1px solid rgba(46,211,255,.24); }
+
 </style>
-
-<link rel="manifest" href="./manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="HUNTER">
-<link rel="icon" href="./icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="./icon-192.png">
-
 </head>
 <body>
-<div id="app"></div>
+<div class="hunter-scan"></div><div id="app"></div>
 
 <script>
 /* ============================================================
@@ -55,34 +65,57 @@
 const HUNTER_NAME = "Saksham";
 
 const PLAN = {
-  Push: [
-    { name: "Barbell Bench Press", sets: 4, reps: "6-10", type: "bilateral" },
-    { name: "Dumbbell Overhead Press", sets: 3, reps: "8-10", type: "bilateral" },
-    { name: "Incline Dumbbell Press", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
-    { name: "Single-Arm DB Shrug", sets: 3, reps: "12", type: "unilateral", note: "Right side first" },
-    { name: "Lateral Raises", sets: 3, reps: "12-15", type: "bilateral" },
-    { name: "Triceps Pushdown / Dips", sets: 3, reps: "10-12", type: "bilateral" },
+  "Push A": [
+    { name: "Incline Dumbbell Press", sets: 3, reps: "6-10", type: "unilateral", note: "~30° incline • upper-chest bias • left arm first" },
+    { name: "Barbell Bench Press", sets: 3, reps: "6-10", type: "bilateral" },
+    { name: "Lateral Raises", sets: 4, reps: "10-20", type: "bilateral", note: "Controlled • no swinging" },
+    { name: "Cable Fly", sets: 2, reps: "10-15", type: "bilateral", note: "Full comfortable ROM" },
+    { name: "Overhead Cable Triceps Extension", sets: 3, reps: "8-15", type: "bilateral", note: "Long-head emphasis" },
   ],
-  Pull: [
-    { name: "Barbell Row (bent-over or chest-supported)", sets: 4, reps: "6-10", type: "bilateral" },
-    { name: "Pull-ups / Lat Pulldown", sets: 4, reps: "8-12", type: "bilateral" },
-    { name: "Single-Arm DB Row", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
-    { name: "Face Pulls", sets: 3, reps: "15", type: "bilateral" },
-    { name: "Dumbbell Curl", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
-    { name: "Left-Arm Curl (bonus)", sets: 1, reps: "10-12", type: "left-only", note: "Catch-up volume" },
+  "Pull A": [
+    { name: "Pull-ups / Lat Pulldown", sets: 3, reps: "6-10", type: "bilateral", note: "Drive elbows down • full ROM" },
+    { name: "Chest-Supported Row", sets: 3, reps: "8-12", type: "bilateral" },
+    { name: "Single-Arm DB Row", sets: 2, reps: "8-12", type: "unilateral", note: "Left arm first" },
+    { name: "Face Pulls", sets: 2, reps: "12-20", type: "bilateral" },
+    { name: "Dumbbell Curl", sets: 3, reps: "8-12", type: "unilateral", note: "Left arm first" },
+    { name: "Hammer Curl", sets: 2, reps: "10-15", type: "bilateral" },
   ],
-  Legs: [
-    { name: "Squat", sets: 4, reps: "6-10", type: "bilateral" },
-    { name: "Bulgarian Split Squat", sets: 3, reps: "10-12", type: "unilateral", note: "Left leg first" },
-    { name: "Romanian Deadlift", sets: 3, reps: "8-10", type: "bilateral" },
-    { name: "Walking Lunge", sets: 3, reps: "10-12", type: "unilateral", note: "Left leg first" },
-    { name: "Leg Curl", sets: 3, reps: "12", type: "bilateral" },
-    { name: "Calf Raises", sets: 4, reps: "15", type: "bilateral" },
+  "Legs A": [
+    { name: "Squat", sets: 3, reps: "6-10", type: "bilateral" },
+    { name: "45° Back Extension", sets: 3, reps: "6-10", type: "bilateral", note: "Controlled stretch • neutral spine" },
+    { name: "Leg Extension", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Seated Leg Curl", sets: 3, reps: "8-15", type: "bilateral", note: "Long-length hamstring bias" },
+    { name: "Calf Raises", sets: 3, reps: "8-15", type: "bilateral", note: "Deep stretch • full plantarflexion" },
+    { name: "Cable Crunch", sets: 3, reps: "10-15", type: "bilateral" },
+  ],
+  "Push B": [
+    { name: "Barbell Bench Press", sets: 3, reps: "6-10", type: "bilateral" },
+    { name: "Incline Dumbbell Press", sets: 2, reps: "8-12", type: "unilateral", note: "~30° incline • left arm first" },
+    { name: "Lateral Raises", sets: 4, reps: "10-20", type: "bilateral", note: "Controlled • no swinging" },
+    { name: "Dumbbell Overhead Press", sets: 2, reps: "8-12", type: "bilateral" },
+    { name: "Cable Fly", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Triceps Pushdown / Dips", sets: 3, reps: "10-15", type: "bilateral" },
+  ],
+  "Pull B": [
+    { name: "Neutral-Grip Lat Pulldown", sets: 3, reps: "8-12", type: "bilateral", note: "Lat-focused • don't chase grip width" },
+    { name: "Barbell Row", sets: 3, reps: "6-10", type: "bilateral" },
+    { name: "Straight-Arm Pulldown", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Face Pulls", sets: 2, reps: "12-20", type: "bilateral" },
+    { name: "Preacher Curl", sets: 3, reps: "8-12", type: "bilateral" },
+    { name: "Hammer Curl", sets: 2, reps: "10-15", type: "bilateral" },
+  ],
+  "Legs B": [
+    { name: "Leg Press", sets: 3, reps: "8-12", type: "bilateral" },
+    { name: "Bulgarian Split Squat", sets: 2, reps: "8-12", type: "unilateral", note: "Left leg first" },
+    { name: "Seated Leg Curl", sets: 3, reps: "8-15", type: "bilateral" },
+    { name: "Leg Extension", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Calf Raises", sets: 3, reps: "8-15", type: "bilateral" },
+    { name: "Hanging Leg Raise", sets: 3, reps: "8-15", type: "bilateral" },
   ],
   Rest: [],
 };
 
-const WEEK_MAP = ["Rest", "Push", "Pull", "Legs", "Push", "Pull", "Legs"];
+const WEEK_MAP = ["Rest", "Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"];
 const RANKS = [
   { min: 0, label: "E", color: "#6B7A91" },
   { min: 5, label: "D", color: "#4ADE80" },
@@ -94,29 +127,38 @@ const RANKS = [
 
 const INCREMENTS = {
   "Barbell Bench Press": 2.5,
-  "Dumbbell Overhead Press": 2,
   "Incline Dumbbell Press": 2,
-  "Single-Arm DB Shrug": 2,
   "Lateral Raises": 1,
+  "Cable Fly": 2.5,
+  "Overhead Cable Triceps Extension": 2.5,
+  "Dumbbell Overhead Press": 2,
   "Triceps Pushdown / Dips": 2.5,
-  "Barbell Row (bent-over or chest-supported)": 2.5,
   "Pull-ups / Lat Pulldown": 2.5,
+  "Chest-Supported Row": 2.5,
   "Single-Arm DB Row": 2,
   "Face Pulls": 2.5,
   "Dumbbell Curl": 1,
-  "Left-Arm Curl (bonus)": 1,
-  Squat: 5,
-  "Bulgarian Split Squat": 2,
-  "Romanian Deadlift": 5,
-  "Walking Lunge": 2,
-  "Leg Curl": 2.5,
+  "Hammer Curl": 1,
+  "Neutral-Grip Lat Pulldown": 2.5,
+  "Barbell Row": 2.5,
+  "Straight-Arm Pulldown": 2.5,
+  "Preacher Curl": 1,
+  "Squat": 5,
+  "45° Back Extension": 5,
+  "Leg Extension": 2.5,
+  "Seated Leg Curl": 2.5,
   "Calf Raises": 5,
+  "Cable Crunch": 2.5,
+  "Leg Press": 5,
+  "Bulgarian Split Squat": 2,
+  "Hanging Leg Raise": 2.5,
 };
 
 const EXERCISE_CATEGORY = {};
 Object.entries(PLAN).forEach(([cat, exs]) => {
   if (cat === "Rest") return;
-  exs.forEach((ex) => { EXERCISE_CATEGORY[ex.name] = cat; });
+  const baseCat = cat.split(" ")[0];
+  exs.forEach((ex) => { EXERCISE_CATEGORY[ex.name] = baseCat; });
 });
 
 /* ============================================================
@@ -626,6 +668,19 @@ function renderStatusTab(c) {
     <p class="body-font" style="font-size:11px; color:#5E7291; margin-top:8px; line-height:1.5;">Stats are a gamified read of your logged training data — not a clinical measurement of your actual strength or fitness.</p>
   `, "margin-bottom:16px;");
 
+  html += sysWindow("#2ED3FF", `
+    <div class="boss-card" style="padding:2px;">
+      ${sectionLabel("AESTHETIC BUILD", "#2ED3FF")}
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+        <div class="aesthetic-chip">◈ V-TAPER • LATS + SIDE DELTS</div>
+        <div class="aesthetic-chip">◈ UPPER CHEST • ~30° INCLINE</div>
+        <div class="aesthetic-chip">◈ ARMS • LONG-LENGTH WORK</div>
+        <div class="aesthetic-chip">◈ LEGS • QUADS + HAMSTRINGS + CALVES</div>
+      </div>
+      <p class="body-font" style="font-size:11px; color:#8FA3C4; line-height:1.55; margin:10px 0 0;">The plan now uses A/B variants so the same muscles are trained twice weekly with systematic exercise variation rather than random swaps.</p>
+    </div>
+  `, "margin-top:16px; padding:14px;");
+
   html += `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
     ${miniStat("STREAK", `${c.streak}d`, "#4ADE80")}
     ${miniStat("SESSIONS", c.sessionDates.size, "#2ED3FF")}
@@ -773,17 +828,20 @@ function renderIntelTab(c) {
     `, "margin-bottom:14px;");
   }
 
-  ["Push", "Pull", "Legs"].forEach((cat) => {
+  [["Push", ["Push A", "Push B"]], ["Pull", ["Pull A", "Pull B"]], ["Legs", ["Legs A", "Legs B"]]].forEach(([cat, variants]) => {
     const accent = cat === "Push" ? "#2ED3FF" : cat === "Pull" ? "#8B6FFF" : "#FFD166";
-    html += `<div style="margin-bottom:6px;">${sectionLabel(cat.toUpperCase() + " — PROGRESSION", accent)}`;
-    PLAN[cat].forEach((ex) => {
-      html += sysWindow("#1B2A45", `
-        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-          <span class="body-font" style="font-size:14px; font-weight:700;">${esc(ex.name)}</span>
-          <span class="num" style="font-size:10px; color:#5E7291;">${esc(ex.reps)} target</span>
-        </div>
-        ${exerciseSuggestion(c.suggestions[ex.name])}
-      `, "margin-bottom:10px; padding:12px 14px;");
+    html += `<div style="margin-bottom:12px;">${sectionLabel(cat.toUpperCase() + " — AESTHETIC PROGRESSION", accent)}`;
+    variants.forEach((variant) => {
+      html += `<div class="sys-font" style="font-size:9px; letter-spacing:2px; color:${accent}; margin:10px 0 6px;">${variant.toUpperCase()}</div>`;
+      PLAN[variant].forEach((ex) => {
+        html += sysWindow("#1B2A45", `
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px; gap:8px;">
+            <span class="body-font" style="font-size:14px; font-weight:700;">${esc(ex.name)}</span>
+            <span class="num" style="font-size:10px; color:#5E7291; white-space:nowrap;">${esc(ex.reps)} target</span>
+          </div>
+          ${exerciseSuggestion(c.suggestions[ex.name])}
+        `, "margin-bottom:8px; padding:12px 14px;");
+      });
     });
     html += `</div>`;
   });
@@ -818,7 +876,7 @@ function renderGrowthTab(c) {
   `);
 
   html += `<p class="body-font" style="font-size:12px; color:#5E7291; margin-top:14px; line-height:1.6;">
-    Target: ~0.5–1kg gain per month. Flat for 2-3 weeks straight means your surplus isn't big enough — raise calories, not just training volume.
+    Use the curve to judge your trend. If bodyweight is not moving toward your intended goal for several weeks, review food intake before adding more training volume.
   </p>`;
   return html;
 }
@@ -826,7 +884,7 @@ function renderGrowthTab(c) {
 function renderRecoveryTab() {
   const today = State.nutrition[date] || {};
   const items = [
-    { key: "protein", label: "Protein target hit (130–150g)", hint: "eggs, paneer, chicken, dal, curd, whey" },
+    { key: "protein", label: "Protein target hit", hint: "Your planned daily protein target" },
     { key: "surplus", label: "Ate in a calorie surplus", hint: "4-5 meals across the day" },
     { key: "sleep", label: "Slept 7-8 hours", hint: "recovery window — non-negotiable" },
   ];
@@ -920,14 +978,10 @@ function attachInputListeners() {
 
 render();
 </script>
-
 <script>
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function () {
-    navigator.serviceWorker.register("./sw.js", { scope: "./" }).catch(function () {});
-  });
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js", {scope:"./"}).catch(()=>{}));
 }
 </script>
-
 </body>
 </html>
