@@ -1012,14 +1012,11 @@ function render() {
 
   html += '<div class="header"><div class="header-row"><div><div class="header-sub">THE SYSTEM</div><h1 class="header-title">HUNTER: ' + HUNTER_NAME.toUpperCase() + '</h1></div>';
   html += '<div class="rank-badge"><div class="rank-letter" style="color:' + d.rank.color + ';text-shadow:0 0 14px ' + d.rank.color + '88;">' + d.rank.label + '</div><div class="rank-label">RANK</div></div></div>';
-  html += '<div class="header-date">' + fmtDate(S.date) + "</div>
-<div class="system-motion mono" style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:9px;letter-spacing:1.5px;color:#5E7291;">
-  <span style="width:6px;height:6px;border-radius:50%;background:#4ADE80;box-shadow:0 0 9px #4ADE80;display:inline-block;animation:pulseDot 1.4s ease-in-out infinite;"></span>
-  SYSTEM ONLINE
-  <span style="opacity:.45;">//</span>
-  <span class="system-flicker">AESTHETIC PROTOCOL</span>
-</div>
-</div>";
+  html += '<div class="header-date">' + fmtDate(S.date) + '</div>' +
+    '<div class="system-motion mono" style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:9px;letter-spacing:1.5px;color:#5E7291;">' +
+    '<span style="width:6px;height:6px;border-radius:50%;background:#4ADE80;box-shadow:0 0 9px #4ADE80;display:inline-block;animation:pulseDot 1.4s ease-in-out infinite;"></span>' +
+    'SYSTEM ONLINE <span style="opacity:.45;">//</span> <span class="system-flicker">AESTHETIC PROTOCOL</span></div>' +
+    '</div>';
 
   html += '<nav class="nav">';
   tabs.forEach(function (t) { html += '<button class="' + (S.tab === t ? "active" : "") + '" onclick="setTab(\'' + t + '\')">' + tabLabels[t] + "</button>"; });
