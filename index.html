@@ -1,200 +1,377 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#05070C">
-<link rel="manifest" href="./manifest.json">
-<link rel="icon" href="./icon-192.png" type="image/png">
-<title>HUNTER: SYSTEM</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Hunter System</title>
 <style>
+  :root {
+    --void: #05070C;
+    --panel: #0C1220;
+    --border: #1B2A45;
+    --blue: #2ED3FF;
+    --purple: #8B6FFF;
+    --text: #DCEFFF;
+    --dim: #5E7291;
+    --green: #4ADE80;
+    --gold: #FFD166;
+    --orange: #FF9F5A;
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; padding: 0; background: #05070C; }
+  html, body { margin: 0; padding: 0; background: var(--void); overflow-x: hidden; }
   body {
-    color: #DCEFFF;
-    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
     min-height: 100vh;
+    position: relative;
   }
-  .sys-font { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .body-font { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; }
-  .num { font-family: "SF Mono", "Consolas", "JetBrains Mono", monospace; }
-  input:focus, button:focus, textarea:focus { outline: 2px solid #2ED3FF; outline-offset: 1px; }
-  input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
-  button { font-family: inherit; }
-  @keyframes popIn {
-    0% { transform: scale(0.9); opacity: 0; }
-    60% { transform: scale(1.02); opacity: 1; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-  .glow-text { text-shadow: 0 0 12px rgba(46,211,255,0.5); }
+  #bgcanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.55; }
+  #bgwash { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+    background: radial-gradient(ellipse at 50% -10%, #0D1830 0%, #05070C 55%); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace; }
+  .sys { font-weight: 900; letter-spacing: 1.5px; text-transform: uppercase; }
+  input:focus, button:focus, textarea:focus { outline: 2px solid var(--blue); outline-offset: 1px; }
+  input[type=number] { -moz-appearance: textfield; }
   ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-thumb { background: #1B2A45; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  button { -webkit-user-select: none; user-select: none; }
+  button:active { transform: scale(0.97); }
 
-  .sys-window { position: relative; background: linear-gradient(180deg, #0C1220 0%, #0A0F1A 100%); border-radius: 2px; padding: 18px; box-shadow: 0 0 0 1px rgba(0,0,0,0.4); }
-  .sys-corner { position: absolute; width: 12px; height: 12px; }
-  .input-cell { width: 100%; background: #080B12; border: 1px solid #1B2A45; border-radius: 2px; color: #DCEFFF; padding: 7px 8px; font-size: 13px; text-align: center; }
-  .tab-btn { flex: 1; padding: 13px 0; background: transparent; border: none; font-size: 9.5px; letter-spacing: 1px; font-weight: 700; cursor: pointer; }
-  .mini-stat { background: #0C1220; border-radius: 2px; padding: 12px 8px; text-align: center; }
-  .checklist-btn { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; background: #0C1220; border-radius: 2px; padding: 14px; margin-bottom: 10px; cursor: pointer; }
+  /* ---- Boot sequence ---- */
+  #boot {
+    position: fixed; inset: 0; z-index: 999; background: #05070C;
+    display: flex; align-items: center; justify-content: center; flex-direction: column;
+    transition: opacity 0.6s ease-out, visibility 0.6s ease-out;
+  }
+  #boot.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  .boot-line { font-family: ui-monospace, monospace; font-size: 13px; color: var(--blue); opacity: 1;
+    margin-bottom: 8px; letter-spacing: 1px; text-shadow: 0 0 10px rgba(46,211,255,0.6); animation: bootFade 0.5s ease-out; }
+  @keyframes bootFade { from { transform: translateY(6px); } to { transform: translateY(0); } }
+  .boot-bar { width: 200px; height: 3px; background: #0F1830; border: 1px solid var(--border); margin-top: 16px; overflow: hidden; border-radius: 2px; }
+  .boot-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--blue), var(--purple)); animation: bootLoad 1.6s ease-in-out forwards; animation-delay: 0.3s; }
+  @keyframes bootLoad { to { width: 100%; } }
 
-  body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; background:radial-gradient(circle at 20% 10%, rgba(46,211,255,.09), transparent 28%), radial-gradient(circle at 85% 30%, rgba(139,111,255,.08), transparent 30%); }
-  body::after { content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; opacity:.18; background-image:linear-gradient(rgba(46,211,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(46,211,255,.06) 1px,transparent 1px); background-size:34px 34px; mask-image:linear-gradient(to bottom,black,transparent 80%); }
-  @keyframes scan { 0%{transform:translateY(-100%);opacity:0} 15%{opacity:.7} 80%{opacity:.15} 100%{transform:translateY(100vh);opacity:0} }
-  @keyframes pulseGlow { 0%,100%{box-shadow:0 0 0 rgba(46,211,255,0)} 50%{box-shadow:0 0 24px rgba(46,211,255,.12)} }
-  @keyframes floatIn { from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
-  .hunter-scan { position:fixed; left:0; right:0; top:0; height:2px; background:linear-gradient(90deg,transparent,#2ED3FF,transparent); animation:scan 6s linear infinite; z-index:100; pointer-events:none; }
-  .sys-window { border:1px solid rgba(46,211,255,.12); background:linear-gradient(145deg,rgba(12,18,32,.96),rgba(5,9,17,.96)); overflow:hidden; animation:floatIn .35s ease both; }
-  .sys-window:hover { animation:pulseGlow 2s ease-in-out infinite; }
-  .tab-btn { text-transform:uppercase; transition:all .2s ease; }
-  .tab-btn:active { transform:scale(.96); }
-  .aesthetic-chip { display:inline-flex; align-items:center; gap:6px; border:1px solid #1B2A45; background:#09101d; padding:6px 9px; border-radius:999px; font-size:9px; letter-spacing:1.2px; color:#9FB5D4; }
-  .boss-card { background:linear-gradient(135deg,rgba(46,211,255,.10),rgba(139,111,255,.06) 50%,rgba(255,209,102,.05)); border:1px solid rgba(46,211,255,.24); }
+  /* ---- Entrance / transition animations ---- */
+  @keyframes fadeInUp { from { transform: translateY(10px); } to { transform: translateY(0); } }
+  @keyframes mainFade { from { opacity: 0; } to { opacity: 1; } }
+  .main-fade { animation: mainFade 0.35s ease-out; }
+  .card-in { opacity: 0; transform: translateY(10px); transition: opacity 0.35s ease-out, transform 0.35s ease-out; }
+  .card-in.show { opacity: 1; transform: translateY(0); }
+
+  @keyframes glowPulse { 0%, 100% { box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 24px -8px var(--g1, rgba(46,211,255,0.4)), inset 0 0 40px -20px var(--g2, rgba(46,211,255,0.2)); }
+    50% { box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 34px -6px var(--g1b, rgba(46,211,255,0.53)), inset 0 0 50px -18px var(--g2b, rgba(46,211,255,0.27)); } }
+
+  @keyframes scanSweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  .win-scan { position: absolute; top: 0; left: 0; width: 40%; height: 1px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent); opacity: 0.5;
+    animation: scanSweep 3.5s linear infinite; }
+
+  @keyframes ringPulse { 0% { transform: scale(0.6); opacity: 0.9; } 100% { transform: scale(2.4); opacity: 0; } }
+  .level-ring { position: absolute; top: 50%; left: 50%; width: 80px; height: 80px; margin: -40px 0 0 -40px;
+    border: 2px solid var(--blue); border-radius: 50%; animation: ringPulse 1.4s ease-out infinite; }
+  @keyframes levelPop { 0% { transform: scale(0.7); opacity: 0; } 55% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+
+  @keyframes shimmer { 0% { background-position: -120px 0; } 100% { background-position: 220px 0; } }
+  .bar-shimmer::after { content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    background-size: 80px 100%; background-repeat: no-repeat; animation: shimmer 2.2s ease-in-out infinite; }
+
+  @keyframes checkPop { 0% { transform: scale(0); } 60% { transform: scale(1.3); } 100% { transform: scale(1); } }
+
+  .header { padding: 26px 18px 16px; border-bottom: 1px solid var(--border); animation: fadeInUp 0.5s ease-out; }
+  .header-row { display: flex; justify-content: space-between; align-items: center; }
+  .header-sub { font-size: 10px; letter-spacing: 3px; color: var(--dim); }
+  .header-title { margin: 2px 0 0; font-size: 24px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 12px rgba(46,211,255,0.5); }
+  .header-date { font-size: 12px; color: var(--dim); margin-top: 6px; }
+  .rank-badge { text-align: right; }
+  .rank-letter { font-size: 22px; font-weight: 900; animation: fadeInUp 0.6s ease-out; }
+  .rank-label { font-size: 10px; color: var(--dim); letter-spacing: 1px; }
+  .nav { display: flex; border-bottom: 1px solid var(--border); background: #080B12; position: sticky; top: 0; z-index: 10; }
+  .nav button { flex: 1; padding: 13px 0; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--dim); font-size: 9.5px; letter-spacing: 1px; font-weight: 700; cursor: pointer; font-family: inherit; transition: color 0.2s, border-color 0.2s; }
+  .nav button.active { color: var(--text); border-bottom: 2px solid var(--blue); }
+  .main { padding: 18px; padding-bottom: 60px; position: relative; }
+  .win { position: relative; background: linear-gradient(180deg, #0C1220 0%, #0A0F1A 100%); border-radius: 2px; padding: 18px; margin-bottom: 14px; overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 24px -8px var(--g1, rgba(46,211,255,0.4)), inset 0 0 40px -20px var(--g2, rgba(46,211,255,0.2)); }
+  @media (prefers-reduced-motion: no-preference) {
+    .win { animation: glowPulse 4s ease-in-out infinite; }
+  }
+  .win .corner { position: absolute; width: 12px; height: 12px; border-width: 2px; border-style: solid; }
+  .section-label { font-size: 11px; letter-spacing: 3px; margin-bottom: 10px; font-weight: 700; text-transform: uppercase; }
+  .stat-bar-row { margin-bottom: 12px; }
+  .stat-bar-label { display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 11px; letter-spacing: 1.5px; color: #8FA3C4; }
+  .stat-bar-track { height: 6px; background: #0F1830; border-radius: 3px; overflow: hidden; border: 1px solid var(--border); position: relative; }
+  .stat-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(.2,.9,.3,1); position: relative; overflow: hidden; }
+  .mini-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .mini-stat { background: var(--panel); border: 1px solid var(--border); border-radius: 2px; padding: 12px 8px; text-align: center; transition: transform 0.2s; }
+  .mini-stat .val { font-size: 17px; font-weight: 700; }
+  .mini-stat .lbl { font-size: 9px; color: var(--dim); letter-spacing: 1px; margin-top: 3px; }
+  .ex-card { border: 1px solid var(--border); border-radius: 2px; padding: 14px; margin-bottom: 10px; background: linear-gradient(180deg, #0C1220 0%, #0A0F1A 100%); position: relative; overflow: hidden; }
+  .ex-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .ex-name { margin: 0; font-size: 15px; font-weight: 700; }
+  .ex-target { font-size: 11px; color: var(--dim); }
+  .ex-note { display: inline-block; font-size: 10px; color: var(--gold); letter-spacing: 0.5px; background: #1F1A0E; border: 1px solid #4A3F1E; border-radius: 2px; padding: 2px 8px; margin-bottom: 8px; }
+  .suggest-box { border: 1px solid #131E33; border-left: 2px solid var(--blue); border-radius: 2px; padding: 8px 10px; margin-bottom: 10px; background: #080D18; }
+  .suggest-label { font-size: 9px; letter-spacing: 1.5px; color: var(--dim); margin-bottom: 4px; }
+  .suggest-line { font-size: 12px; line-height: 1.4; margin-bottom: 3px; }
+  .plateau-line { font-size: 11px; color: var(--purple); margin-top: 2px; }
+  .asym-line { font-size: 11px; color: var(--orange); margin-top: 2px; }
+  .set-row { display: grid; grid-template-columns: 16px 1fr 12px 1fr; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .set-idx { font-size: 11px; color: var(--dim); }
+  .set-x { color: #3A4A6A; text-align: center; }
+  .side-block { border: 1px solid #131E33; border-radius: 2px; padding: 8px; margin-bottom: 8px; }
+  .side-block .set-idx-label { font-size: 10px; color: var(--dim); margin-bottom: 5px; }
+  input.numfield { width: 100%; background: #080B12; border: 1px solid var(--border); border-radius: 2px; color: var(--text); padding: 7px 8px; font-size: 14px; text-align: center; font-family: inherit; transition: border-color 0.2s; }
+  input.numfield:valid, input.numfield:not(:placeholder-shown) { border-color: #2A4A5A; }
+  .quest-header { display: flex; justify-content: space-between; align-items: center; }
+  .quest-count { font-size: 15px; }
+  .day-badge { display: inline-block; font-size: 9px; letter-spacing: 1px; color: var(--dim); background: #0F1830; border: 1px solid var(--border); border-radius: 2px; padding: 2px 8px; margin-left: 8px; }
+  .checklist-item { width: 100%; display: flex; align-items: center; gap: 12px; text-align: left; background: var(--panel); border-radius: 2px; padding: 14px; margin-bottom: 10px; cursor: pointer; border-width: 1px; border-style: solid; font-family: inherit; transition: border-color 0.3s, background 0.3s; }
+  .checkbox { width: 20px; height: 20px; border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-width: 1px; border-style: solid; transition: background 0.2s, border-color 0.2s; }
+  .checkbox.on span { display: inline-block; animation: checkPop 0.3s ease-out; }
+  .checklist-label { font-size: 14px; font-weight: 700; color: var(--text); }
+  .checklist-hint { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  textarea.backup { width: 100%; height: 70px; background: #080B12; border: 1px solid var(--border); border-radius: 2px; color: #8FA3C4; font-size: 10px; padding: 8px; font-family: ui-monospace, monospace; margin-bottom: 10px; }
+  .btn { border: none; border-radius: 2px; font-weight: 700; padding: 10px 18px; font-size: 12px; letter-spacing: 1px; cursor: pointer; font-family: inherit; }
+  .btn-outline { background: transparent; border: 1px solid var(--orange); color: var(--orange); }
+  .flex-row { display: flex; gap: 8px; }
+  .grow { flex: 1; }
+  .level-up-flash { position: fixed; top: 16%; left: 50%; transform: translateX(-50%); z-index: 50; text-align: center; pointer-events: none; }
+  .level-up-inner { position: relative; width: 140px; height: 140px; display: flex; align-items: center; justify-content: center; flex-direction: column; animation: levelPop 0.5s cubic-bezier(.2,.9,.3,1); }
+  .svg-chart text { font-size: 8px; fill: var(--dim); font-family: ui-monospace, monospace; }
+  .error-banner { margin: 16px 18px; padding: 10px 14px; background: #1F0E12; border: 1px solid #5A2530; border-radius: 2px; font-size: 13px; color: #FF9F9F; }
+  .msg-banner { margin: 0 0 10px; padding: 8px 12px; background: #0E1F16; border: 1px solid #2E5A3A; border-radius: 2px; font-size: 12px; color: var(--green); }
+  p { line-height: 1.5; }
+  b { color: var(--text); }
+
+/* ---- HUNTER SYSTEM EXTRA MOTION LAYER ---- */
+@keyframes neonFlicker {
+  0%, 18%, 20%, 24%, 100% { opacity: 1; }
+  19%, 23% { opacity: .72; }
+}
+@keyframes borderSweep {
+  0% { transform: translateX(-120%) rotate(0deg); opacity: 0; }
+  12% { opacity: .8; }
+  55% { opacity: .8; }
+  100% { transform: translateX(120%) rotate(0deg); opacity: 0; }
+}
+@keyframes floatHud {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes pulseDot {
+  0%,100% { transform: scale(.8); opacity: .45; }
+  50% { transform: scale(1.35); opacity: 1; }
+}
+@keyframes xpFlash {
+  0% { transform: scale(.96); filter: brightness(1); }
+  45% { transform: scale(1.025); filter: brightness(1.5); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+@keyframes dataSweep {
+  0% { transform: translateY(-120%); opacity: 0; }
+  15% { opacity: .25; }
+  85% { opacity: .18; }
+  100% { transform: translateY(120%); opacity: 0; }
+}
+@keyframes cornerPulse {
+  0%,100% { opacity: .45; }
+  50% { opacity: 1; }
+}
+@keyframes questComplete {
+  0% { box-shadow: 0 0 0 rgba(74,222,128,0); }
+  40% { box-shadow: 0 0 35px rgba(74,222,128,.45); }
+  100% { box-shadow: 0 0 12px rgba(74,222,128,.15); }
+}
+@keyframes microScan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 40px; }
+}
+.system-motion {
+  animation: floatHud 3.5s ease-in-out infinite;
+}
+.system-flicker {
+  animation: neonFlicker 5s linear infinite;
+}
+.ex-card:hover, .mini-stat:hover, .checklist-item:hover {
+  transform: translateY(-2px);
+  border-color: #2ED3FF88;
+  box-shadow: 0 8px 24px rgba(0,0,0,.22), 0 0 18px rgba(46,211,255,.08);
+}
+.ex-card {
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+}
+.ex-card::after {
+  content:"";
+  position:absolute;
+  left:-40%;
+  top:0;
+  width:35%;
+  height:100%;
+  background:linear-gradient(90deg,transparent,rgba(46,211,255,.10),transparent);
+  transform:skewX(-18deg);
+  animation:borderSweep 5.5s ease-in-out infinite;
+  pointer-events:none;
+}
+.win::after {
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  height:22%;
+  top:-25%;
+  background:linear-gradient(180deg,transparent,rgba(46,211,255,.06),transparent);
+  animation:dataSweep 6s linear infinite;
+  pointer-events:none;
+}
+.rank-letter { text-shadow:0 0 12px currentColor; }
+.header-title { animation: neonFlicker 7s linear infinite; }
+.stat-bar-fill { animation: xpFlash 2.8s ease-in-out infinite; }
+.win .corner { animation: cornerPulse 2.2s ease-in-out infinite; }
 
 </style>
 </head>
 <body>
-<div class="hunter-scan"></div><div id="app"></div>
-
+<canvas id="bgcanvas"></canvas>
+<div id="bgwash"></div>
+<div id="boot">
+  <div id="bootLines"></div>
+  <div class="boot-bar"><div class="boot-bar-fill"></div></div>
+</div>
+<div id="app"></div>
 <script>
 /* ============================================================
-   DATA + CONFIG  (ported unchanged from the original app)
+   DATA — restructured into A/B variants per hypertrophy research:
+   - V-taper (lat width + lateral delt) is the primary aesthetic driver
+   - Different angles/grips grow different regions of the same muscle
+   - 10-20 sets/week/muscle is the evidence-backed hypertrophy range
+   - Calves + abs are commonly neglected; both added with direct work
    ============================================================ */
-const HUNTER_NAME = "Saksham";
+var HUNTER_NAME = "Saksham";
 
-const PLAN = {
+var PLAN = {
   "Push A": [
-    { name: "Incline Dumbbell Press", sets: 3, reps: "6-10", type: "unilateral", note: "~30° incline • upper-chest bias • left arm first" },
-    { name: "Barbell Bench Press", sets: 3, reps: "6-10", type: "bilateral" },
-    { name: "Lateral Raises", sets: 4, reps: "10-20", type: "bilateral", note: "Controlled • no swinging" },
-    { name: "Overhead Cable Triceps Extension", sets: 3, reps: "8-15", type: "bilateral", note: "Long-head emphasis" },
+    { name: "Barbell Bench Press", sets: 4, reps: "6-10", type: "bilateral" },
+    { name: "Seated Dumbbell Shoulder Press", sets: 3, reps: "8-10", type: "bilateral" },
+    { name: "Incline Dumbbell Press", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Lateral Raises", sets: 3, reps: "12-15", type: "bilateral" },
+    { name: "Single-Arm DB Shrug", sets: 3, reps: "12", type: "unilateral", note: "Right side first" },
+    { name: "Rope Triceps Pushdown", sets: 3, reps: "10-12", type: "bilateral" }
   ],
   "Pull A": [
-    { name: "Pull-ups / Lat Pulldown", sets: 3, reps: "6-10", type: "bilateral", note: "Drive elbows down • full ROM" },
-    { name: "Chest-Supported Row", sets: 3, reps: "8-12", type: "bilateral" },
-    { name: "Single-Arm DB Row", sets: 3, reps: "8-12", type: "unilateral", note: "Left arm first" },
-    { name: "Face Pulls", sets: 2, reps: "12-20", type: "bilateral" },
-    { name: "Dumbbell Curl", sets: 3, reps: "8-12", type: "unilateral", note: "Left arm first" },
-    { name: "Hammer Curl", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Barbell Row (bent-over or chest-supported)", sets: 4, reps: "6-10", type: "bilateral" },
+    { name: "Wide-Grip Pull-up / Lat Pulldown", sets: 4, reps: "8-12", type: "bilateral" },
+    { name: "Single-Arm DB Row", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Face Pulls", sets: 3, reps: "15", type: "bilateral" },
+    { name: "Dumbbell Curl", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Left-Arm Curl (bonus)", sets: 1, reps: "10-12", type: "left-only", note: "Catch-up volume" }
   ],
   "Legs A": [
-    { name: "Squat", sets: 3, reps: "6-10", type: "bilateral" },
-    { name: "45° Back Extension", sets: 3, reps: "8-12", type: "bilateral", note: "Controlled stretch • neutral spine" },
-    { name: "Leg Extension", sets: 3, reps: "10-15", type: "bilateral" },
-    { name: "Seated Leg Curl", sets: 3, reps: "8-15", type: "bilateral", note: "Long-length hamstring bias" },
-    { name: "Calf Raises", sets: 3, reps: "8-15", type: "bilateral", note: "Deep stretch • full plantarflexion" },
-    { name: "Cable Crunch", sets: 3, reps: "10-15", type: "bilateral" },
+    { name: "Squat", sets: 4, reps: "6-10", type: "bilateral" },
+    { name: "Bulgarian Split Squat", sets: 3, reps: "10-12", type: "unilateral", note: "Left leg first" },
+    { name: "Romanian Deadlift", sets: 3, reps: "8-10", type: "bilateral" },
+    { name: "Leg Curl", sets: 3, reps: "12", type: "bilateral" },
+    { name: "Standing Calf Raise", sets: 4, reps: "15", type: "bilateral" },
+    { name: "Hanging Leg Raise", sets: 3, reps: "12-15", type: "bilateral" }
   ],
   "Push B": [
-    { name: "Barbell Bench Press", sets: 3, reps: "6-10", type: "bilateral" },
-    { name: "Incline Dumbbell Press", sets: 3, reps: "8-12", type: "unilateral", note: "~30° incline • left arm first" },
-    { name: "Lateral Raises", sets: 4, reps: "10-20", type: "bilateral", note: "Controlled • no swinging" },
-    { name: "Dumbbell Overhead Press", sets: 3, reps: "8-12", type: "bilateral" },
-    { name: "Triceps Pushdown / Dips", sets: 3, reps: "10-15", type: "bilateral" },
+    { name: "Incline Barbell Press", sets: 4, reps: "6-10", type: "bilateral" },
+    { name: "Cable Lateral Raise", sets: 3, reps: "12-15", type: "bilateral" },
+    { name: "Flat Dumbbell Press", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Overhead Cable Triceps Extension", sets: 3, reps: "10-12", type: "bilateral" },
+    { name: "Single-Arm DB Shrug", sets: 3, reps: "12", type: "unilateral", note: "Right side first" },
+    { name: "Dips", sets: 3, reps: "8-12", type: "bilateral" }
   ],
   "Pull B": [
-    { name: "Neutral-Grip Lat Pulldown", sets: 3, reps: "8-12", type: "bilateral", note: "Lat-focused • don't chase grip width" },
-    { name: "Barbell Row", sets: 3, reps: "6-10", type: "bilateral" },
-    { name: "Straight-Arm Pulldown", sets: 3, reps: "10-15", type: "bilateral" },
-    { name: "Face Pulls", sets: 2, reps: "12-20", type: "bilateral" },
-    { name: "Preacher Curl", sets: 3, reps: "8-12", type: "bilateral" },
-    { name: "Hammer Curl", sets: 2, reps: "10-15", type: "bilateral" },
+    { name: "Neutral-Grip Pull-up / Close-Grip Lat Pulldown", sets: 4, reps: "8-12", type: "bilateral" },
+    { name: "Seated Cable Row", sets: 3, reps: "10-12", type: "bilateral" },
+    { name: "Single-Arm Cable Pulldown", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Machine Reverse Fly", sets: 3, reps: "15", type: "bilateral" },
+    { name: "Incline Dumbbell Curl", sets: 3, reps: "10-12", type: "unilateral", note: "Left arm first" },
+    { name: "Left-Arm Curl (bonus)", sets: 1, reps: "10-12", type: "left-only", note: "Catch-up volume" }
   ],
   "Legs B": [
-    { name: "Leg Press", sets: 3, reps: "8-12", type: "bilateral" },
-    { name: "Bulgarian Split Squat", sets: 3, reps: "8-12", type: "unilateral", note: "Left leg first" },
-    { name: "Seated Leg Curl", sets: 3, reps: "8-15", type: "bilateral" },
-    { name: "Leg Extension", sets: 3, reps: "10-15", type: "bilateral" },
-    { name: "Calf Raises", sets: 3, reps: "8-15", type: "bilateral" },
-    { name: "Hanging Leg Raise", sets: 3, reps: "8-15", type: "bilateral" },
+    { name: "Leg Press", sets: 4, reps: "8-12", type: "bilateral" },
+    { name: "Walking Step-Up", sets: 3, reps: "10-12", type: "unilateral", note: "Left leg first" },
+    { name: "45° Back Extension", sets: 3, reps: "10-12", type: "bilateral" },
+    { name: "Leg Extension", sets: 3, reps: "12-15", type: "bilateral" },
+    { name: "Seated Calf Raise", sets: 4, reps: "15", type: "bilateral" },
+    { name: "Cable Crunch", sets: 3, reps: "12-15", type: "bilateral" }
   ],
-  Rest: [],
+  Rest: []
 };
 
-const WEEK_MAP = ["Rest", "Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"];
-const RANKS = [
+var WEEK_MAP = ["Rest", "Push A", "Pull A", "Legs A", "Push B", "Pull B", "Legs B"];
+var DAY_BASE_CATEGORY = { "Push A": "Push", "Push B": "Push", "Pull A": "Pull", "Pull B": "Pull", "Legs A": "Legs", "Legs B": "Legs", "Rest": "Rest" };
+var RANKS = [
   { min: 0, label: "E", color: "#6B7A91" },
   { min: 5, label: "D", color: "#4ADE80" },
   { min: 10, label: "C", color: "#2ED3FF" },
   { min: 15, label: "B", color: "#8B6FFF" },
   { min: 20, label: "A", color: "#FF9F5A" },
-  { min: 25, label: "S", color: "#FFD166" },
+  { min: 25, label: "S", color: "#FFD166" }
 ];
 
-const INCREMENTS = {
-  "Barbell Bench Press": 2.5,
-  "Incline Dumbbell Press": 2,
-  "Lateral Raises": 1,
-  "Cable Fly": 2.5,
-  "Overhead Cable Triceps Extension": 2.5,
-  "Dumbbell Overhead Press": 2,
-  "Triceps Pushdown / Dips": 2.5,
-  "Pull-ups / Lat Pulldown": 2.5,
-  "Chest-Supported Row": 2.5,
-  "Single-Arm DB Row": 2,
-  "Face Pulls": 2.5,
-  "Dumbbell Curl": 1,
-  "Hammer Curl": 1,
-  "Neutral-Grip Lat Pulldown": 2.5,
-  "Barbell Row": 2.5,
-  "Straight-Arm Pulldown": 2.5,
-  "Preacher Curl": 1,
-  "Squat": 5,
-  "45° Back Extension": 5,
-  "Leg Extension": 2.5,
-  "Seated Leg Curl": 2.5,
-  "Calf Raises": 5,
-  "Cable Crunch": 2.5,
-  "Leg Press": 5,
-  "Bulgarian Split Squat": 2,
-  "Hanging Leg Raise": 2.5,
+var INCREMENTS = {
+  "Barbell Bench Press": 2.5, "Seated Dumbbell Shoulder Press": 2, "Incline Dumbbell Press": 2,
+  "Lateral Raises": 1, "Single-Arm DB Shrug": 2, "Rope Triceps Pushdown": 2.5,
+  "Barbell Row (bent-over or chest-supported)": 2.5, "Wide-Grip Pull-up / Lat Pulldown": 2.5,
+  "Single-Arm DB Row": 2, "Face Pulls": 2.5, "Dumbbell Curl": 1, "Left-Arm Curl (bonus)": 1,
+  "Squat": 5, "Bulgarian Split Squat": 2, "Romanian Deadlift": 5, "Leg Curl": 2.5,
+  "Standing Calf Raise": 5, "Hanging Leg Raise": 2.5, "Incline Barbell Press": 2.5,
+  "Cable Lateral Raise": 1, "Flat Dumbbell Press": 2, "Overhead Cable Triceps Extension": 2,
+  "Dips": 2.5, "Neutral-Grip Pull-up / Close-Grip Lat Pulldown": 2.5, "Seated Cable Row": 2.5,
+  "Single-Arm Cable Pulldown": 2, "Machine Reverse Fly": 2, "Incline Dumbbell Curl": 1,
+  "Leg Press": 10, "Walking Step-Up": 2, "45° Back Extension": 5, "Leg Extension": 2.5,
+  "Seated Calf Raise": 5, "Cable Crunch": 2.5
 };
 
-const EXERCISE_CATEGORY = {};
-Object.entries(PLAN).forEach(([cat, exs]) => {
+var EXERCISE_CATEGORY = {};
+Object.keys(PLAN).forEach(function (cat) {
   if (cat === "Rest") return;
-  const baseCat = cat.split(" ")[0];
-  exs.forEach((ex) => { EXERCISE_CATEGORY[ex.name] = baseCat; });
+  PLAN[cat].forEach(function (ex) { EXERCISE_CATEGORY[ex.name] = DAY_BASE_CATEGORY[cat]; });
 });
 
 /* ============================================================
-   PURE HELPER FUNCTIONS (unchanged logic from original)
+   DATE HELPERS
    ============================================================ */
-function todayKey(offset = 0) {
-  const d = new Date();
+function todayKey(offset) {
+  offset = offset || 0;
+  var d = new Date();
   d.setDate(d.getDate() + offset);
   return d.toISOString().slice(0, 10);
 }
 function dayTypeFor(dateStr) {
-  const d = new Date(dateStr + "T00:00:00");
+  var d = new Date(dateStr + "T00:00:00");
   return WEEK_MAP[d.getDay()];
 }
 function fmtDate(dateStr) {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-IN", {
-    weekday: "long", day: "numeric", month: "short",
-  });
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
 }
 function getWeekStart(dateStr) {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay();
+  var d = new Date(dateStr + "T00:00:00");
+  var day = d.getDay();
   d.setDate(d.getDate() - day);
   return d.toISOString().slice(0, 10);
 }
+
+/* ============================================================
+   PROGRESSION INTELLIGENCE
+   ============================================================ */
 function parseRepRange(str) {
-  const m = String(str).match(/(\d+)(?:-(\d+))?/);
+  var m = String(str).match(/(\d+)(?:-(\d+))?/);
   if (!m) return { min: 8, max: 12 };
-  const min = parseInt(m[1], 10);
-  const max = m[2] ? parseInt(m[2], 10) : min;
-  return { min, max };
+  var min = parseInt(m[1], 10);
+  var max = m[2] ? parseInt(m[2], 10) : min;
+  return { min: min, max: max };
 }
 function extractPairs(sets, sideKey) {
-  const out = [];
-  (sets || []).forEach((s) => {
+  var out = [];
+  (sets || []).forEach(function (s) {
     if (!s) return;
     if (sideKey) {
-      const side = s[sideKey];
+      var side = s[sideKey];
       if (side && side.w !== "" && side.r !== "" && side.w != null && side.r != null) {
         out.push({ w: Number(side.w), r: Number(side.r) });
       }
@@ -206,70 +383,63 @@ function extractPairs(sets, sideKey) {
 }
 function roundStep(v) { return Math.round(v * 2) / 2; }
 function evaluateSets(pairs, range, increment) {
-  const lastWeight = pairs[pairs.length - 1].w;
-  const minReps = Math.min(...pairs.map((p) => p.r));
+  var lastWeight = pairs[pairs.length - 1].w;
+  var minReps = Math.min.apply(null, pairs.map(function (p) { return p.r; }));
   if (minReps >= range.max) {
-    return { status: "increase-weight", weight: roundStep(lastWeight + increment), reps: range.min, lastWeight, lastReps: minReps };
+    return { status: "increase-weight", weight: roundStep(lastWeight + increment), reps: range.min, lastWeight: lastWeight, lastReps: minReps };
   }
   if (minReps >= range.min) {
-    return { status: "increase-reps", weight: lastWeight, reps: Math.min(minReps + 1, range.max), lastWeight, lastReps: minReps };
+    return { status: "increase-reps", weight: lastWeight, reps: Math.min(minReps + 1, range.max), lastWeight: lastWeight, lastReps: minReps };
   }
-  return { status: "hold", weight: lastWeight, reps: range.min, lastWeight, lastReps: minReps };
+  return { status: "hold", weight: lastWeight, reps: range.min, lastWeight: lastWeight, lastReps: minReps };
 }
 function checkPlateau(history, sideKey) {
-  const lastN = history.slice(-3);
+  var lastN = history.slice(-3);
   if (lastN.length < 3) return false;
-  const stats = lastN.map((h) => {
-    const pairs = extractPairs(h.sets, sideKey);
+  var stats = lastN.map(function (h) {
+    var pairs = extractPairs(h.sets, sideKey);
     if (!pairs.length) return null;
-    return { weight: pairs[pairs.length - 1].w, minReps: Math.min(...pairs.map((p) => p.r)) };
+    return { weight: pairs[pairs.length - 1].w, minReps: Math.min.apply(null, pairs.map(function (p) { return p.r; })) };
   });
-  if (stats.some((s) => !s)) return false;
-  const sameWeight = stats.every((s) => s.weight === stats[0].weight);
-  const repsNotImproving = stats[2].minReps <= stats[0].minReps;
+  if (stats.some(function (s) { return !s; })) return false;
+  var sameWeight = stats.every(function (s) { return s.weight === stats[0].weight; });
+  var repsNotImproving = stats[2].minReps <= stats[0].minReps;
   return sameWeight && repsNotImproving;
 }
 function evaluateSideHistory(history, sideKey, range, increment) {
   if (!history.length) return { status: "no-data" };
-  const last = history[history.length - 1];
-  const pairs = extractPairs(last.sets, sideKey);
+  var last = history[history.length - 1];
+  var pairs = extractPairs(last.sets, sideKey);
   if (!pairs.length) return { status: "no-data" };
-  const evalNow = evaluateSets(pairs, range, increment);
-  evalNow.plateau = checkPlateau(history, sideKey);
-  return evalNow;
+  var ev = evaluateSets(pairs, range, increment);
+  ev.plateau = checkPlateau(history, sideKey);
+  return ev;
 }
 function buildSuggestion(ex, combinedLogs, excludeDate) {
-  const history = Object.entries(combinedLogs)
-    .filter(([d]) => d !== excludeDate)
-    .filter(([, exs]) => exs && exs[ex.name] && exs[ex.name].length)
-    .map(([d, exs]) => ({ date: d, sets: exs[ex.name] }))
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  const range = parseRepRange(ex.reps);
-  const increment = INCREMENTS[ex.name] || 2.5;
-
-  if (ex.type === "bilateral") {
-    return { type: "bilateral", main: evaluateSideHistory(history, null, range, increment) };
-  }
-  if (ex.type === "left-only") {
-    return { type: "left-only", L: evaluateSideHistory(history, "L", range, increment) };
-  }
-  return {
-    type: "unilateral",
-    L: evaluateSideHistory(history, "L", range, increment),
-    R: evaluateSideHistory(history, "R", range, increment),
-  };
+  var history = [];
+  Object.keys(combinedLogs).forEach(function (d) {
+    if (d === excludeDate) return;
+    var exs = combinedLogs[d];
+    if (exs && exs[ex.name] && exs[ex.name].length) history.push({ date: d, sets: exs[ex.name] });
+  });
+  history.sort(function (a, b) { return a.date.localeCompare(b.date); });
+  var range = parseRepRange(ex.reps);
+  var increment = INCREMENTS[ex.name] || 2.5;
+  if (ex.type === "bilateral") return { type: "bilateral", main: evaluateSideHistory(history, null, range, increment) };
+  if (ex.type === "left-only") return { type: "left-only", L: evaluateSideHistory(history, "L", range, increment) };
+  return { type: "unilateral", L: evaluateSideHistory(history, "L", range, increment), R: evaluateSideHistory(history, "R", range, increment) };
 }
 function computeWeeklyVolume(combinedLogs) {
-  const weeks = {};
-  Object.entries(combinedLogs).forEach(([d, exs]) => {
+  var weeks = {};
+  Object.keys(combinedLogs).forEach(function (d) {
+    var exs = combinedLogs[d];
     if (!exs) return;
-    const ws = getWeekStart(d);
-    Object.entries(exs).forEach(([exName, sets]) => {
-      const cat = EXERCISE_CATEGORY[exName];
+    var ws = getWeekStart(d);
+    Object.keys(exs).forEach(function (exName) {
+      var cat = EXERCISE_CATEGORY[exName];
       if (!cat) return;
-      let vol = 0;
-      (sets || []).forEach((s) => {
+      var vol = 0;
+      (exs[exName] || []).forEach(function (s) {
         if (!s) return;
         if (s.w && s.r) vol += Number(s.w) * Number(s.r);
         if (s.L && s.L.w && s.L.r) vol += Number(s.L.w) * Number(s.L.r);
@@ -279,707 +449,679 @@ function computeWeeklyVolume(combinedLogs) {
       weeks[ws][cat] += vol;
     });
   });
-  return Object.values(weeks).sort((a, b) => a.week.localeCompare(b.week)).slice(-4);
+  var arr = Object.keys(weeks).map(function (k) { return weeks[k]; });
+  arr.sort(function (a, b) { return a.week.localeCompare(b.week); });
+  return arr.slice(-4);
 }
 function computeBalance(weeklyData) {
   if (!weeklyData.length) return { flag: false };
-  const last = weeklyData[weeklyData.length - 1];
-  const vals = [last.Push, last.Pull, last.Legs];
-  const max = Math.max(...vals);
-  const min = Math.min(...vals);
+  var last = weeklyData[weeklyData.length - 1];
+  var vals = [last.Push, last.Pull, last.Legs];
+  var max = Math.max.apply(null, vals);
+  var min = Math.min.apply(null, vals);
   if (max === 0) return { flag: false };
   if (min < max * 0.6) {
-    const cats = ["Push", "Pull", "Legs"];
-    const minCat = cats[vals.indexOf(min)];
-    return {
-      flag: true,
-      text: `${minCat} volume is noticeably behind the others this week — an illustrative pattern from your logs, not a diagnosis. Consider prioritizing ${minCat.toLowerCase()} a little harder in your next session.`,
-    };
+    var cats = ["Push", "Pull", "Legs"];
+    var minCat = cats[vals.indexOf(min)];
+    return { flag: true, text: minCat + " volume is noticeably behind the others this week — an illustrative pattern from your logs, not a diagnosis. Consider prioritizing " + minCat.toLowerCase() + " a little harder in your next session." };
   }
   return { flag: false };
 }
-function esc(str) {
-  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
 
 /* ============================================================
-   STORAGE (localStorage — synchronous, fully offline)
+   PERSISTENCE (localStorage — synchronous, fully offline)
    ============================================================ */
-const Store = {
-  get(key) {
-    try {
-      const v = localStorage.getItem(key);
-      return v == null ? null : JSON.parse(v);
-    } catch (e) { return null; }
-  },
-  set(key, value) {
-    try { localStorage.setItem(key, JSON.stringify(value)); return true; }
-    catch (e) { return false; }
-  },
-  allWorkoutLogs() {
-    const out = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.indexOf("workout:") === 0) {
-        const d = k.replace("workout:", "");
-        const v = Store.get(k);
-        if (v) out[d] = v;
-      }
+function loadAllLogs() {
+  var out = {};
+  for (var i = 0; i < localStorage.length; i++) {
+    var k = localStorage.key(i);
+    if (k && k.indexOf("workout:") === 0) {
+      try { out[k.slice(8)] = JSON.parse(localStorage.getItem(k)); } catch (e) {}
     }
-    return out;
   }
-};
+  return out;
+}
+function loadBW() { try { return JSON.parse(localStorage.getItem("bodyweight-history") || "[]"); } catch (e) { return []; } }
+function loadNutrition() { try { return JSON.parse(localStorage.getItem("nutrition-log") || "{}"); } catch (e) { return {}; } }
 
 /* ============================================================
-   APP STATE
+   STATE
    ============================================================ */
-const date = todayKey();
-const dayType = dayTypeFor(date);
-
-const State = {
+var S = {
   tab: "Status",
-  todayLog: Store.get(`workout:${date}`) || {},
-  allLogs: Store.allWorkoutLogs(),
-  bwHistory: Store.get("bodyweight-history") || [],
-  nutrition: Store.get("nutrition-log") || {},
+  date: todayKey(),
+  allLogs: loadAllLogs(),
+  bwHistory: loadBW(),
+  nutrition: loadNutrition(),
+  bwInput: "",
   showBackup: false,
   importMsg: "",
   levelUpFlash: false,
   prevLevel: null,
+  storageOk: true,
+  cardCounter: 0
 };
-// make sure today's log is present in allLogs too
-State.allLogs[date] = State.todayLog;
+S.todayLog = S.allLogs[S.date] || {};
 
-function saveTodayLog(next) {
-  State.todayLog = next;
-  State.allLogs[date] = next;
-  Store.set(`workout:${date}`, next);
+function persistWorkout() {
+  try { localStorage.setItem("workout:" + S.date, JSON.stringify(S.todayLog)); S.allLogs[S.date] = S.todayLog; S.storageOk = true; }
+  catch (e) { S.storageOk = false; }
 }
-function updateBilateral(exName, idx, field, value) {
-  const next = { ...State.todayLog };
-  const sets = next[exName] ? [...next[exName]] : [];
+function persistBW() {
+  try { localStorage.setItem("bodyweight-history", JSON.stringify(S.bwHistory)); S.storageOk = true; }
+  catch (e) { S.storageOk = false; }
+}
+function persistNutrition() {
+  try { localStorage.setItem("nutrition-log", JSON.stringify(S.nutrition)); S.storageOk = true; }
+  catch (e) { S.storageOk = false; }
+}
+
+/* ============================================================
+   EVENT HANDLERS
+   ============================================================ */
+function setTab(t) { S.tab = t; render(); }
+
+function handleBilateral(exName, idx, field, value) {
+  var sets = (S.todayLog[exName] || []).slice();
   while (sets.length <= idx) sets.push({ w: "", r: "" });
-  sets[idx] = { ...sets[idx], [field]: value };
-  next[exName] = sets;
-  saveTodayLog(next);
+  sets[idx] = Object.assign({}, sets[idx]);
+  sets[idx][field] = value;
+  S.todayLog = Object.assign({}, S.todayLog);
+  S.todayLog[exName] = sets;
+  persistWorkout();
+  render();
 }
-function updateUnilateral(exName, idx, side, field, value) {
-  const next = { ...State.todayLog };
-  const sets = next[exName] ? [...next[exName]] : [];
+function handleUnilateral(exName, idx, side, field, value) {
+  var sets = (S.todayLog[exName] || []).slice();
   while (sets.length <= idx) sets.push({ L: { w: "", r: "" }, R: { w: "", r: "" } });
-  const set = { ...sets[idx] };
-  set[side] = { ...(set[side] || { w: "", r: "" }), [field]: value };
+  var set = Object.assign({}, sets[idx]);
+  set[side] = Object.assign({}, set[side] || { w: "", r: "" });
+  set[side][field] = value;
   sets[idx] = set;
-  next[exName] = sets;
-  saveTodayLog(next);
+  S.todayLog = Object.assign({}, S.todayLog);
+  S.todayLog[exName] = sets;
+  persistWorkout();
+  render();
 }
-function saveBodyweight() {
-  const input = document.getElementById("bwInput");
-  const val = parseFloat(input.value);
+function handleBWInput(v) { S.bwInput = v; }
+function saveBW() {
+  var val = parseFloat(S.bwInput);
   if (!val || val <= 0) return;
-  const next = [...State.bwHistory.filter((e) => e.date !== date), { date, weight: val }]
-    .sort((a, b) => a.date.localeCompare(b.date));
-  State.bwHistory = next;
-  Store.set("bodyweight-history", next);
+  var filtered = S.bwHistory.filter(function (e) { return e.date !== S.date; });
+  filtered.push({ date: S.date, weight: val });
+  filtered.sort(function (a, b) { return a.date.localeCompare(b.date); });
+  S.bwHistory = filtered;
+  S.bwInput = "";
+  persistBW();
   render();
 }
 function toggleNutrition(field) {
-  const day = State.nutrition[date] || { protein: false, surplus: false, sleep: false };
-  const next = { ...State.nutrition, [date]: { ...day, [field]: !day[field] } };
-  State.nutrition = next;
-  Store.set("nutrition-log", next);
+  var day = S.nutrition[S.date] || { protein: false, surplus: false, sleep: false };
+  var nextDay = Object.assign({}, day);
+  nextDay[field] = !day[field];
+  S.nutrition = Object.assign({}, S.nutrition);
+  S.nutrition[S.date] = nextDay;
+  persistNutrition();
   render();
 }
-function handleRestore() {
-  const ta = document.getElementById("importTextArea");
+function toggleBackupPanel() { S.showBackup = !S.showBackup; render(); }
+function doExportCopy() {
+  var ta = document.getElementById("backupText");
+  if (ta) { ta.focus(); ta.select(); }
   try {
-    const parsed = JSON.parse(ta.value);
-    if (parsed.allLogs) {
-      State.allLogs = parsed.allLogs;
-      Object.entries(parsed.allLogs).forEach(([d, log]) => Store.set(`workout:${d}`, log));
-      State.todayLog = parsed.allLogs[date] || State.todayLog;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(function () { S.importMsg = "Copied to clipboard."; render(); })
+        .catch(function () { S.importMsg = "Clipboard blocked — text is selected, use your keyboard's copy."; render(); });
+      return;
     }
-    if (parsed.bwHistory) { State.bwHistory = parsed.bwHistory; Store.set("bodyweight-history", parsed.bwHistory); }
-    if (parsed.nutrition) { State.nutrition = parsed.nutrition; Store.set("nutrition-log", parsed.nutrition); }
-    State.importMsg = "Restored successfully.";
-  } catch (e) {
-    State.importMsg = "That doesn't look like valid backup text — paste the exact text from a previous Copy Backup.";
-  }
+  } catch (e) {}
+  S.importMsg = "Text is selected — use your keyboard's copy action.";
   render();
 }
-function setTab(t) { State.tab = t; render(); }
-function toggleBackup() { State.showBackup = !State.showBackup; render(); }
+function doImport() {
+  var ta = document.getElementById("importArea");
+  try {
+    var parsed = JSON.parse(ta.value);
+    if (parsed.allLogs) {
+      S.allLogs = parsed.allLogs;
+      S.todayLog = S.allLogs[S.date] || {};
+      Object.keys(S.allLogs).forEach(function (d) { localStorage.setItem("workout:" + d, JSON.stringify(S.allLogs[d])); });
+    }
+    if (parsed.bwHistory) { S.bwHistory = parsed.bwHistory; persistBW(); }
+    if (parsed.nutrition) { S.nutrition = parsed.nutrition; persistNutrition(); }
+    S.importMsg = "Restored successfully.";
+  } catch (e) { S.importMsg = "That doesn't look like valid backup text."; }
+  render();
+}
 
 /* ============================================================
-   DERIVED / COMPUTED VALUES
+   DERIVED STATE
    ============================================================ */
-function computeAll() {
-  const combinedLogs = { ...State.allLogs, [date]: State.todayLog };
+function computeDerived() {
+  var combinedLogs = Object.assign({}, S.allLogs);
+  combinedLogs[S.date] = S.todayLog;
 
-  let totalXP = 0, totalVolume = 0;
-  const sessionDates = new Set();
-  Object.entries(combinedLogs).forEach(([d, exs]) => {
-    Object.values(exs || {}).forEach((sets) => {
-      (sets || []).forEach((s) => {
-        if (s && s.w && s.r) { totalXP += 10; totalVolume += Number(s.w) * Number(s.r); sessionDates.add(d); }
-        if (s && s.L && s.L.w && s.L.r) { totalXP += 10; totalVolume += Number(s.L.w) * Number(s.L.r); sessionDates.add(d); }
-        if (s && s.R && s.R.w && s.R.r) { totalXP += 10; totalVolume += Number(s.R.w) * Number(s.R.r); sessionDates.add(d); }
+  var xp = 0, vol = 0;
+  var sessions = {};
+  Object.keys(combinedLogs).forEach(function (d) {
+    var exs = combinedLogs[d] || {};
+    Object.keys(exs).forEach(function (exName) {
+      (exs[exName] || []).forEach(function (s) {
+        if (s && s.w && s.r) { xp += 10; vol += Number(s.w) * Number(s.r); sessions[d] = true; }
+        if (s && s.L && s.L.w && s.L.r) { xp += 10; vol += Number(s.L.w) * Number(s.L.r); sessions[d] = true; }
+        if (s && s.R && s.R.w && s.R.r) { xp += 10; vol += Number(s.R.w) * Number(s.R.r); sessions[d] = true; }
       });
     });
   });
 
-  const suggestions = {};
-  Object.values(PLAN).flat().forEach((ex) => { suggestions[ex.name] = buildSuggestion(ex, combinedLogs, date); });
+  var suggestions = {};
+  Object.keys(PLAN).forEach(function (cat) {
+    PLAN[cat].forEach(function (ex) { suggestions[ex.name] = buildSuggestion(ex, combinedLogs, S.date); });
+  });
 
-  const weeklyVolume = computeWeeklyVolume(combinedLogs);
-  const balance = computeBalance(weeklyVolume);
+  var weeklyVolume = computeWeeklyVolume(combinedLogs);
+  var balance = computeBalance(weeklyVolume);
 
-  const level = Math.floor(totalXP / 100) + 1;
-  const xpIntoLevel = totalXP % 100;
-  const rank = [...RANKS].reverse().find((r) => level >= r.min) || RANKS[0];
+  var level = Math.floor(xp / 100) + 1;
+  var xpIntoLevel = xp % 100;
+  var rank = RANKS.slice().reverse().find(function (r) { return level >= r.min; }) || RANKS[0];
 
-  if (State.prevLevel !== null && level > State.prevLevel) {
-    State.levelUpFlash = true;
-    setTimeout(() => { State.levelUpFlash = false; render(); }, 2400);
-  }
-  State.prevLevel = level;
-
-  const latestBw = State.bwHistory.length ? State.bwHistory[State.bwHistory.length - 1].weight : null;
-  const startBw = State.bwHistory.length ? State.bwHistory[0].weight : null;
-  const bwGain = latestBw && startBw ? latestBw - startBw : 0;
-
-  let streak = 0;
-  for (let i = 0; i < 60; i++) {
-    const dt = todayKey(-i);
-    const dType = dayTypeFor(dt);
+  var streak = 0;
+  for (var i = 0; i < 60; i++) {
+    var dt = todayKey(-i);
+    var dType = dayTypeFor(dt);
     if (dType === "Rest") continue;
-    if (sessionDates.has(dt)) streak++;
+    if (sessions[dt]) streak++;
     else if (i === 0) continue;
     else break;
   }
 
-  const STR = Math.min(100, Math.round(totalVolume / 250));
-  const VIT = Math.min(100, Math.round(streak * 8));
-  const END = Math.min(100, Math.round(sessionDates.size * 4));
-  const PHY = Math.min(100, Math.max(0, Math.round(bwGain * 18)));
+  var sessionCount = Object.keys(sessions).length;
+  var STR = Math.min(100, Math.round(vol / 250));
+  var VIT = Math.min(100, Math.round(streak * 8));
+  var END = Math.min(100, Math.round(sessionCount * 4));
 
-  const plan = PLAN[dayType] || [];
-  let done = 0, total = 0;
-  plan.forEach((ex) => {
-    const sets = State.todayLog[ex.name] || [];
+  var latestBw = S.bwHistory.length ? S.bwHistory[S.bwHistory.length - 1].weight : null;
+  var startBw = S.bwHistory.length ? S.bwHistory[0].weight : null;
+  var bwGain = latestBw && startBw ? latestBw - startBw : 0;
+  var PHY = Math.min(100, Math.max(0, Math.round(bwGain * 18)));
+
+  var dayType = dayTypeFor(S.date);
+  var plan = PLAN[dayType] || [];
+  var done = 0, total = 0;
+  plan.forEach(function (ex) {
+    var sets = S.todayLog[ex.name] || [];
     if (ex.type === "bilateral") {
       total += ex.sets;
-      for (let i = 0; i < ex.sets; i++) if (sets[i] && sets[i].w && sets[i].r) done++;
+      for (var i2 = 0; i2 < ex.sets; i2++) if (sets[i2] && sets[i2].w && sets[i2].r) done++;
     } else if (ex.type === "unilateral") {
       total += ex.sets * 2;
-      for (let i = 0; i < ex.sets; i++) {
-        const s = sets[i];
-        if (s && s.L && s.L.w && s.L.r) done++;
-        if (s && s.R && s.R.w && s.R.r) done++;
+      for (var i3 = 0; i3 < ex.sets; i3++) {
+        var s3 = sets[i3];
+        if (s3 && s3.L && s3.L.w && s3.L.r) done++;
+        if (s3 && s3.R && s3.R.w && s3.R.r) done++;
       }
     } else if (ex.type === "left-only") {
       total += ex.sets;
-      for (let i = 0; i < ex.sets; i++) if (sets[i] && sets[i].L && sets[i].L.w && sets[i].L.r) done++;
+      for (var i4 = 0; i4 < ex.sets; i4++) if (sets[i4] && sets[i4].L && sets[i4].L.w && sets[i4].L.r) done++;
     }
   });
-  const completion = { done, total };
-  const questComplete = total > 0 && done === total;
 
-  return { combinedLogs, totalXP, totalVolume, sessionDates, suggestions, weeklyVolume, balance, level, xpIntoLevel, rank, latestBw, startBw, bwGain, streak, STR, VIT, END, PHY, completion, questComplete };
+  return {
+    combinedLogs: combinedLogs, totalXP: xp, totalVolume: vol, sessionCount: sessionCount,
+    suggestions: suggestions, weeklyVolume: weeklyVolume, balance: balance,
+    level: level, xpIntoLevel: xpIntoLevel, rank: rank, streak: streak,
+    STR: STR, VIT: VIT, END: END, PHY: PHY,
+    dayType: dayType, plan: plan, todayCompletion: { done: done, total: total },
+    questComplete: total > 0 && done === total,
+    latestBw: latestBw, startBw: startBw, bwGain: bwGain
+  };
 }
 
 /* ============================================================
-   UI PRIMITIVES
+   RENDER HELPERS
    ============================================================ */
-function sysWindow(accent, innerHTML, extraStyle) {
-  return `<div class="sys-window" style="border:1px solid ${accent}55; box-shadow:0 0 0 1px rgba(0,0,0,0.4), 0 0 24px -8px ${accent}66, inset 0 0 40px -20px ${accent}33; ${extraStyle || ""}">
-    <span class="sys-corner" style="top:-1px; left:-1px; border-top:2px solid ${accent}; border-left:2px solid ${accent};"></span>
-    <span class="sys-corner" style="top:-1px; right:-1px; border-top:2px solid ${accent}; border-right:2px solid ${accent};"></span>
-    <span class="sys-corner" style="bottom:-1px; left:-1px; border-bottom:2px solid ${accent}; border-left:2px solid ${accent};"></span>
-    <span class="sys-corner" style="bottom:-1px; right:-1px; border-bottom:2px solid ${accent}; border-right:2px solid ${accent};"></span>
-    ${innerHTML}
-  </div>`;
-}
-function sectionLabel(text, accent) {
-  accent = accent || "#2ED3FF";
-  return `<div class="sys-font" style="font-size:11px; letter-spacing:3px; color:${accent}; margin-bottom:10px; font-weight:700;">${esc(text)}</div>`;
-}
-function statBar(label, value, color) {
-  return `<div style="margin-bottom:12px;">
-    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-      <span class="sys-font" style="font-size:11px; letter-spacing:1.5px; color:#8FA3C4;">${esc(label)}</span>
-      <span class="num" style="font-size:12px; color:${color}; font-weight:700;">${value}</span>
-    </div>
-    <div style="height:6px; background:#0F1830; border-radius:3px; overflow:hidden; border:1px solid #1B2A45;">
-      <div style="height:100%; width:${value}%; background:linear-gradient(90deg, ${color}88, ${color}); box-shadow:0 0 8px ${color}99; transition:width 0.6s ease-out;"></div>
-    </div>
-  </div>`;
-}
-function miniStat(label, value, accent) {
-  return `<div class="mini-stat" style="border:1px solid ${accent}44;">
-    <div class="num" style="font-size:17px; font-weight:700; color:${accent};">${esc(String(value))}</div>
-    <div style="font-size:9px; color:#5E7291; letter-spacing:1px; margin-top:3px;">${esc(label)}</div>
-  </div>`;
+function esc(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 function statusColor(status) {
-  switch (status) {
-    case "increase-weight": return "#4ADE80";
-    case "increase-reps": return "#2ED3FF";
-    case "hold": return "#FFD166";
-    default: return "#5E7291";
-  }
+  if (status === "increase-weight") return "#4ADE80";
+  if (status === "increase-reps") return "#2ED3FF";
+  if (status === "hold") return "#FFD166";
+  return "#5E7291";
 }
 function statusText(s) {
   if (s.status === "no-data") return "No history yet — log today as your baseline";
-  if (s.status === "increase-weight") return `\u2191 Weight \u2192 ${s.weight}kg \u00d7 ${s.reps} reps (hit ${s.lastReps} reps @ ${s.lastWeight}kg last time)`;
-  if (s.status === "increase-reps") return `\u2191 Reps \u2192 aim ${s.reps} reps @ ${s.weight}kg (hit ${s.lastReps} last time)`;
-  if (s.status === "hold") return `Hold \u2192 repeat ${s.weight}kg, aim ${s.reps}+ reps (missed target range last time)`;
+  if (s.status === "increase-weight") return "\u2191 Weight \u2192 " + s.weight + "kg \u00d7 " + s.reps + " reps (hit " + s.lastReps + " reps @ " + s.lastWeight + "kg last time)";
+  if (s.status === "increase-reps") return "\u2191 Reps \u2192 aim " + s.reps + " reps @ " + s.weight + "kg (hit " + s.lastReps + " last time)";
+  if (s.status === "hold") return "Hold \u2192 repeat " + s.weight + "kg, aim " + s.reps + "+ reps (missed target range last time)";
   return "";
 }
-function suggestionLine(label, s) {
+function suggestionLineHtml(label, s) {
   if (!s) return "";
-  let html = `<div style="margin-bottom:4px;">
-    <div style="display:flex; gap:6px; align-items:flex-start;">
-      ${label ? `<span class="num" style="font-size:10px; color:${statusColor(s.status)}; flex-shrink:0; margin-top:1px;">${label}</span>` : ""}
-      <span class="body-font" style="font-size:12px; color:${statusColor(s.status)}; line-height:1.4;">${esc(statusText(s))}</span>
-    </div>`;
-  if (s.plateau) {
-    html += `<div class="body-font" style="font-size:11px; color:#8B6FFF; margin-top:2px;">\u26A0 Plateaued — same weight & reps for 3 sessions straight. Consider a light deload (~10% less weight) or swapping the exercise for a week or two.</div>`;
-  }
-  html += `</div>`;
+  var html = '<div class="suggest-line-wrap">';
+  html += '<div class="suggest-line" style="color:' + statusColor(s.status) + '">';
+  if (label) html += '<span class="mono" style="margin-right:6px;">' + label + '</span>';
+  html += statusText(s) + "</div>";
+  if (s.plateau) html += '<div class="plateau-line">\u26A0 Plateaued — same weight & reps for 3 sessions straight. Consider a light deload (~10% less weight) or swapping the exercise for a week or two.</div>';
+  html += "</div>";
   return html;
 }
-function exerciseSuggestion(suggestion) {
+function exerciseSuggestionHtml(suggestion) {
   if (!suggestion) return "";
-  if (suggestion.type === "bilateral") return suggestionLine(null, suggestion.main);
-  if (suggestion.type === "left-only") return suggestionLine("L", suggestion.L);
-
-  const rankMap = { "no-data": 0, hold: 1, "increase-reps": 2, "increase-weight": 3 };
-  const rL = rankMap[suggestion.L.status] ?? 0;
-  const rR = rankMap[suggestion.R.status] ?? 0;
-  const asymmetry = suggestion.L.status !== "no-data" && suggestion.R.status !== "no-data" && rL !== rR;
-  const weakerSide = rL < rR ? "left" : "right";
-  let html = `<div>${suggestionLine("L", suggestion.L)}${suggestionLine("R", suggestion.R)}`;
-  if (asymmetry) {
-    html += `<div class="body-font" style="font-size:11px; color:#FF9F5A; margin-top:2px;">Pace by the ${weakerSide} side — hold both there until it catches up, then progress together.</div>`;
-  }
-  html += `</div>`;
+  if (suggestion.type === "bilateral") return suggestionLineHtml(null, suggestion.main);
+  if (suggestion.type === "left-only") return suggestionLineHtml("L", suggestion.L);
+  var rank = { "no-data": 0, "hold": 1, "increase-reps": 2, "increase-weight": 3 };
+  var rL = rank[suggestion.L.status] || 0;
+  var rR = rank[suggestion.R.status] || 0;
+  var asymmetry = suggestion.L.status !== "no-data" && suggestion.R.status !== "no-data" && rL !== rR;
+  var weaker = rL < rR ? "left" : "right";
+  var html = suggestionLineHtml("L", suggestion.L) + suggestionLineHtml("R", suggestion.R);
+  if (asymmetry) html += '<div class="asym-line">Pace by the ' + weaker + ' side — hold both there until it catches up, then progress together.</div>';
   return html;
 }
+function nextDelay() { S.cardCounter += 1; return Math.min(S.cardCounter * 45, 420); }
+function hexToRgba(hex, alpha) {
+  hex = String(hex).replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map(function (c) { return c + c; }).join("");
+  var r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16);
+  return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
+}
+function winOpen(accent, extraStyle) {
+  var delay = nextDelay();
+  var g1 = hexToRgba(accent, 0.4), g1b = hexToRgba(accent, 0.53);
+  var g2 = hexToRgba(accent, 0.2), g2b = hexToRgba(accent, 0.27);
+  var style = "border:1px solid " + accent + "55;" + (extraStyle || "") + "animation-delay:" + delay + "ms;" +
+    "--g1:" + g1 + ";--g1b:" + g1b + ";--g2:" + g2 + ";--g2b:" + g2b + ";";
+  return '<div class="win card-in" style="' + style + '">' +
+    '<div class="win-scan" style="color:' + accent + ';"></div>' +
+    '<span class="corner" style="top:-1px;left:-1px;border-color:' + accent + ';border-right:none;border-bottom:none;"></span>' +
+    '<span class="corner" style="top:-1px;right:-1px;border-color:' + accent + ';border-left:none;border-bottom:none;"></span>' +
+    '<span class="corner" style="bottom:-1px;left:-1px;border-color:' + accent + ';border-right:none;border-top:none;"></span>' +
+    '<span class="corner" style="bottom:-1px;right:-1px;border-color:' + accent + ';border-left:none;border-top:none;"></span>';
+}
+function winClose() { return "</div>"; }
+function sectionLabel(text, color) { return '<div class="section-label" style="color:' + color + '">' + text + "</div>"; }
+function miniStat(label, value, accent) {
+  return '<div class="mini-stat" style="border-color:' + accent + '44"><div class="val mono" style="color:' + accent + '">' + value + '</div><div class="lbl">' + label + "</div></div>";
+}
+function statBar(label, value, color) {
+  return '<div class="stat-bar-row"><div class="stat-bar-label"><span>' + label + '</span><span class="mono" style="color:' + color + ';font-weight:700;">' + value + '</span></div>' +
+    '<div class="stat-bar-track"><div class="stat-bar-fill bar-shimmer" style="width:' + value + '%; background:linear-gradient(90deg,' + color + '88,' + color + '); box-shadow:0 0 8px ' + color + '99;"></div></div></div>';
+}
 
-/* ============================================================
-   HAND-ROLLED SVG CHARTS (no chart library — fully offline)
-   ============================================================ */
-function barChart(weeklyVolume) {
-  const w = 320, h = 190, padL = 30, padB = 20, padT = 10, padR = 10;
-  const plotW = w - padL - padR, plotH = h - padT - padB;
-  const maxVal = Math.max(1, ...weeklyVolume.flatMap(d => [d.Push, d.Pull, d.Legs]));
-  const groupW = plotW / weeklyVolume.length;
-  const barW = groupW / 4;
-  const colors = { Push: "#2ED3FF", Pull: "#8B6FFF", Legs: "#FFD166" };
-  let bars = "";
-  weeklyVolume.forEach((d, gi) => {
-    ["Push", "Pull", "Legs"].forEach((cat, ci) => {
-      const val = d[cat] || 0;
-      const barH = (val / maxVal) * plotH;
-      const x = padL + gi * groupW + ci * barW + barW * 0.15;
-      const y = padT + plotH - barH;
-      bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(barW*0.7).toFixed(1)}" height="${barH.toFixed(1)}" fill="${colors[cat]}" rx="1"/>`;
+/* ---- simple SVG charts, no external libs ---- */
+function lineChartSvg(history) {
+  if (history.length < 2) return '<p style="color:var(--dim);font-size:13px;text-align:center;padding:24px 0;">Log at least 2 entries to reveal your growth curve.</p>';
+  var w = 300, h = 160, pad = 28;
+  var weights = history.map(function (e) { return e.weight; });
+  var minW = Math.min.apply(null, weights) - 1;
+  var maxW = Math.max.apply(null, weights) + 1;
+  var n = history.length;
+  function x(i) { return pad + (i / (n - 1)) * (w - pad * 1.5); }
+  function y(val) { return h - pad - ((val - minW) / (maxW - minW || 1)) * (h - pad * 1.8); }
+  var points = history.map(function (e, i) { return x(i) + "," + y(e.weight); }).join(" ");
+  var dots = history.map(function (e, i) { return '<circle cx="' + x(i) + '" cy="' + y(e.weight) + '" r="3" fill="#2ED3FF" />'; }).join("");
+  var gridLines = "";
+  for (var g = 0; g <= 3; g++) {
+    var gy = pad + (g / 3) * (h - pad * 1.8);
+    gridLines += '<line x1="' + pad + '" y1="' + gy + '" x2="' + (w - pad * 0.5) + '" y2="' + gy + '" stroke="#1B2A45" stroke-dasharray="2,3" />';
+  }
+  var firstLabel = history[0].date.slice(5);
+  var lastLabel = history[n - 1].date.slice(5);
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" class="svg-chart" style="width:100%;height:180px;">' + gridLines +
+    '<polyline points="' + points + '" fill="none" stroke="#2ED3FF" stroke-width="2" />' + dots +
+    '<text x="' + pad + '" y="' + (h - 4) + '">' + firstLabel + '</text>' +
+    '<text x="' + (w - pad * 2) + '" y="' + (h - 4) + '">' + lastLabel + '</text>' +
+    '<text x="2" y="' + (pad + 4) + '">' + Math.round(maxW) + '</text>' +
+    '<text x="2" y="' + (h - pad + 4) + '">' + Math.round(minW) + '</text>' + "</svg>";
+}
+function barChartSvg(weeklyVolume) {
+  if (!weeklyVolume.length) return '<p style="color:var(--dim);font-size:13px;text-align:center;padding:20px 0;">Log a few sessions to see your split balance here.</p>';
+  var w = 300, h = 170, pad = 24;
+  var maxVal = Math.max.apply(null, weeklyVolume.map(function (wk) { return Math.max(wk.Push, wk.Pull, wk.Legs); })) || 1;
+  var groupW = (w - pad * 1.5) / weeklyVolume.length;
+  var barW = groupW / 4.2;
+  var colors = { Push: "#2ED3FF", Pull: "#8B6FFF", Legs: "#FFD166" };
+  var bars = "", labels = "";
+  weeklyVolume.forEach(function (wk, gi) {
+    var gx = pad + gi * groupW;
+    ["Push", "Pull", "Legs"].forEach(function (cat, ci) {
+      var val = wk[cat];
+      var barH = (val / maxVal) * (h - pad * 2.2);
+      var bx = gx + ci * (barW + 3);
+      var by = h - pad - barH;
+      bars += '<rect x="' + bx + '" y="' + by + '" width="' + barW + '" height="' + barH + '" fill="' + colors[cat] + '" rx="1" />';
     });
+    labels += '<text x="' + (gx + groupW / 2 - 10) + '" y="' + (h - 6) + '">' + wk.week.slice(5) + '</text>';
   });
-  let gridLines = "";
-  for (let i = 0; i <= 3; i++) {
-    const y = padT + (plotH / 3) * i;
-    gridLines += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="#1B2A45" stroke-dasharray="3 3"/>`;
-  }
-  let labels = "";
-  weeklyVolume.forEach((d, gi) => {
-    const x = padL + gi * groupW + groupW / 2;
-    labels += `<text x="${x.toFixed(1)}" y="${h - 4}" fill="#5E7291" font-size="9" text-anchor="middle">${esc(d.week.slice(5))}</text>`;
-  });
-  const legend = `
-    <span style="display:inline-flex; align-items:center; gap:4px; margin-right:12px;"><span style="width:8px;height:8px;background:#2ED3FF;display:inline-block;border-radius:1px;"></span><span style="font-size:10px;color:#8FA3C4;">Push</span></span>
-    <span style="display:inline-flex; align-items:center; gap:4px; margin-right:12px;"><span style="width:8px;height:8px;background:#8B6FFF;display:inline-block;border-radius:1px;"></span><span style="font-size:10px;color:#8FA3C4;">Pull</span></span>
-    <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px;height:8px;background:#FFD166;display:inline-block;border-radius:1px;"></span><span style="font-size:10px;color:#8FA3C4;">Legs</span></span>`;
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:190px; display:block;">${gridLines}${bars}${labels}</svg>
-    <div style="text-align:center; margin-top:6px;">${legend}</div>`;
-}
-function lineChart(history) {
-  const w = 320, h = 200, padL = 32, padB = 22, padT = 10, padR = 12;
-  const plotW = w - padL - padR, plotH = h - padT - padB;
-  const vals = history.map(h2 => h2.weight);
-  const minV = Math.min(...vals) - 1, maxV = Math.max(...vals) + 1;
-  const range = maxV - minV || 1;
-  const pts = history.map((d, i) => {
-    const x = padL + (i / (history.length - 1)) * plotW;
-    const y = padT + plotH - ((d.weight - minV) / range) * plotH;
-    return { x, y, d };
-  });
-  const pathD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
-  let gridLines = "";
-  for (let i = 0; i <= 3; i++) {
-    const y = padT + (plotH / 3) * i;
-    gridLines += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${w - padR}" y2="${y.toFixed(1)}" stroke="#1B2A45" stroke-dasharray="3 3"/>`;
-  }
-  const dots = pts.map(p => `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="#2ED3FF"/>`).join("");
-  let labels = "";
-  const step = Math.max(1, Math.floor(pts.length / 5));
-  pts.forEach((p, i) => {
-    if (i % step === 0 || i === pts.length - 1) {
-      labels += `<text x="${p.x.toFixed(1)}" y="${h - 4}" fill="#5E7291" font-size="9" text-anchor="middle">${esc(p.d.date.slice(5))}</text>`;
-    }
-  });
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:200px; display:block;">
-    ${gridLines}
-    <path d="${pathD}" fill="none" stroke="#2ED3FF" stroke-width="2"/>
-    ${dots}
-    ${labels}
-  </svg>`;
+  var legend = '<circle cx="' + pad + '" cy="8" r="3" fill="#2ED3FF" /><text x="' + (pad + 7) + '" y="11">Push</text>' +
+    '<circle cx="' + (pad + 45) + '" cy="8" r="3" fill="#8B6FFF" /><text x="' + (pad + 52) + '" y="11">Pull</text>' +
+    '<circle cx="' + (pad + 88) + '" cy="8" r="3" fill="#FFD166" /><text x="' + (pad + 95) + '" y="11">Legs</text>';
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" class="svg-chart" style="width:100%;height:190px;">' + legend + bars + labels + "</svg>";
 }
 
 /* ============================================================
-   TAB RENDERERS
+   TAB CONTENT RENDERERS
    ============================================================ */
-function renderStatusTab(c) {
-  const backupData = { allLogs: c.combinedLogs, bwHistory: State.bwHistory, nutrition: State.nutrition };
-  const backupText = JSON.stringify(backupData);
-  let html = "";
+function renderStatus(d) {
+  var html = winOpen(d.rank.color);
+  html += sectionLabel("STATUS WINDOW", d.rank.color);
+  html += '<div style="display:flex;align-items:baseline;gap:14px;margin-bottom:12px;">';
+  html += '<div class="sys" style="font-size:40px;text-shadow:0 0 20px #2ED3FF;">Lv.' + d.level + '</div>';
+  html += '<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:10px;color:var(--dim);">XP TO NEXT LEVEL</span><span class="mono" style="font-size:10px;color:var(--dim);">' + d.xpIntoLevel + '/100</span></div>';
+  html += '<div class="stat-bar-track" style="height:8px;"><div class="stat-bar-fill bar-shimmer" style="width:' + d.xpIntoLevel + '%;background:linear-gradient(90deg,#2ED3FF88,#2ED3FF);box-shadow:0 0 10px #2ED3FF99;"></div></div></div></div>';
+  html += statBar("STRENGTH", d.STR, "#2ED3FF");
+  html += statBar("VITALITY (STREAK)", d.VIT, "#4ADE80");
+  html += statBar("ENDURANCE (SESSIONS)", d.END, "#8B6FFF");
+  html += statBar("PHYSIQUE (MASS GAINED)", d.PHY, "#FFD166");
+  html += '<p style="font-size:11px;color:var(--dim);margin-top:8px;">Stats are a gamified read of your logged training data — not a clinical measurement of your actual strength or fitness.</p>';
+  html += winClose();
 
-  html += sysWindow(c.rank.color, `
-    ${sectionLabel("STATUS WINDOW", c.rank.color)}
-    <div style="display:flex; align-items:baseline; gap:14px; margin-bottom:12px;">
-      <div class="sys-font glow-text" style="font-size:44px; font-weight:900; line-height:1;">Lv.${c.level}</div>
-      <div style="flex:1;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
-          <span style="font-size:10px; color:#5E7291;">XP TO NEXT LEVEL</span>
-          <span class="num" style="font-size:10px; color:#5E7291;">${c.xpIntoLevel}/100</span>
-        </div>
-        <div style="height:8px; background:#0F1830; border-radius:4px; overflow:hidden; border:1px solid #1B2A45;">
-          <div style="height:100%; width:${c.xpIntoLevel}%; background:linear-gradient(90deg,#2ED3FF88,#2ED3FF); box-shadow:0 0 10px #2ED3FF99; transition:width 0.6s ease-out;"></div>
-        </div>
-      </div>
-    </div>
-    ${statBar("STRENGTH", c.STR, "#2ED3FF")}
-    ${statBar("VITALITY (STREAK)", c.VIT, "#4ADE80")}
-    ${statBar("ENDURANCE (SESSIONS)", c.END, "#8B6FFF")}
-    ${statBar("PHYSIQUE (MASS GAINED)", c.PHY, "#FFD166")}
-    <p class="body-font" style="font-size:11px; color:#5E7291; margin-top:8px; line-height:1.5;">Stats are a gamified read of your logged training data — not a clinical measurement of your actual strength or fitness.</p>
-  `, "margin-bottom:16px;");
+  html += '<div class="mini-grid">' + miniStat("STREAK", d.streak + "d", "#4ADE80") + miniStat("SESSIONS", d.sessionCount, "#2ED3FF") + miniStat("VOLUME", Math.round(d.totalVolume / 1000) + "k", "#8B6FFF") + "</div>";
 
-  html += sysWindow("#2ED3FF", `
-    <div class="boss-card" style="padding:2px;">
-      ${sectionLabel("AESTHETIC BUILD", "#2ED3FF")}
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
-        <div class="aesthetic-chip">◈ V-TAPER • LATS + SIDE DELTS</div>
-        <div class="aesthetic-chip">◈ UPPER CHEST • ~30° INCLINE</div>
-        <div class="aesthetic-chip">◈ ARMS • LONG-LENGTH WORK</div>
-        <div class="aesthetic-chip">◈ LEGS • QUADS + HAMSTRINGS + CALVES</div>
-      </div>
-      <p class="body-font" style="font-size:11px; color:#8FA3C4; line-height:1.55; margin:10px 0 0;">The plan now uses A/B variants so the same muscles are trained twice weekly with systematic exercise variation rather than random swaps.</p>
-    </div>
-  `, "margin-top:16px; padding:14px;");
+  html += winOpen("#5E7291");
+  html += sectionLabel("HUNTER LOG", "#8FA3C4");
+  html += '<p style="font-size:13px;color:#B8C7DE;margin:0;">Every completed set feeds this window, and the <b>INTEL</b> tab reads your history to tell you exactly when to add weight, add reps, or hold. Go to <b>QUEST</b> to log today\'s session.</p>';
+  html += winClose();
 
-  html += `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-    ${miniStat("STREAK", `${c.streak}d`, "#4ADE80")}
-    ${miniStat("SESSIONS", c.sessionDates.size, "#2ED3FF")}
-    ${miniStat("VOLUME", `${Math.round(c.totalVolume / 1000)}k`, "#8B6FFF")}
-  </div>`;
-
-  html += sysWindow("#5E7291", `
-    ${sectionLabel("HUNTER LOG", "#8FA3C4")}
-    <p class="body-font" style="font-size:13px; color:#B8C7DE; line-height:1.6; margin:0;">
-      Every completed set feeds this window, and the <b>INTEL</b> tab reads your history to tell you exactly when to add weight, add reps, or hold. Go to <b>QUESTS</b> to log today's session.
-    </p>
-  `, "margin-top:16px;");
-
-  const importMsgHtml = State.importMsg
-    ? `<div class="body-font" style="font-size:12px; color:#4ADE80; margin-top:8px;">${esc(State.importMsg)}</div>` : "";
-
-  html += sysWindow("#FF9F5A", `
-    ${sectionLabel("DATA BACKUP", "#FF9F5A")}
-    <p class="body-font" style="font-size:12px; color:#B8C7DE; line-height:1.5; margin:0 0 10px;">
-      Your data now saves locally on this device automatically — no internet needed. Use this only if you want to move your data to another device or browser.
-    </p>
-    <button onclick="toggleBackup()" class="sys-font" style="background:transparent; border:1px solid #FF9F5A; border-radius:2px; color:#FF9F5A; font-size:11px; letter-spacing:1px; padding:8px 14px; cursor:pointer; margin-bottom:10px;">
-      ${State.showBackup ? "HIDE BACKUP TEXT" : "SHOW BACKUP TEXT"}
-    </button>
-    ${State.showBackup ? `
-      <div>
-        <div style="font-size:10px; color:#5E7291; margin-bottom:4px;">COPY THIS (tap, select all, copy):</div>
-        <textarea readonly onfocus="this.select()" style="width:100%; height:70px; background:#080B12; border:1px solid #1B2A45; border-radius:2px; color:#8FA3C4; font-size:10px; padding:8px; font-family:'SF Mono',Consolas,monospace; margin-bottom:12px;">${esc(backupText)}</textarea>
-        <div style="font-size:10px; color:#5E7291; margin-bottom:4px;">PASTE BACKUP TO RESTORE:</div>
-        <textarea id="importTextArea" placeholder="Paste previously copied backup text here" style="width:100%; height:70px; background:#080B12; border:1px solid #1B2A45; border-radius:2px; color:#DCEFFF; font-size:10px; padding:8px; font-family:'SF Mono',Consolas,monospace; margin-bottom:8px;"></textarea>
-        <button onclick="handleRestore()" class="sys-font" style="background:#FF9F5A; border:none; border-radius:2px; color:#05070C; font-weight:700; font-size:11px; letter-spacing:1px; padding:8px 16px; cursor:pointer;">RESTORE</button>
-        ${importMsgHtml}
-      </div>
-    ` : ""}
-  `, "margin-top:16px;");
-
+  html += winOpen("#FF9F5A");
+  html += sectionLabel("DATA BACKUP (OPTIONAL)", "#FF9F5A");
+  html += '<p style="font-size:12px;color:#B8C7DE;margin:0 0 10px;">Your data saves automatically to this device, fully offline. Use this only if you want a portable backup — e.g. before switching phones.</p>';
+  html += '<button class="btn btn-outline" onclick="toggleBackupPanel()">' + (S.showBackup ? "HIDE BACKUP" : "SHOW BACKUP") + '</button>';
+  if (S.showBackup) {
+    var backupJson = JSON.stringify({ allLogs: d.combinedLogs, bwHistory: S.bwHistory, nutrition: S.nutrition });
+    html += '<div style="margin-top:12px;">';
+    html += '<div style="font-size:10px;color:var(--dim);margin-bottom:4px;">YOUR BACKUP TEXT:</div>';
+    html += '<textarea id="backupText" class="backup" readonly>' + esc(backupJson) + '</textarea>';
+    html += '<button class="btn btn-outline" onclick="doExportCopy()" style="margin-bottom:14px;">COPY</button>';
+    html += '<div style="font-size:10px;color:var(--dim);margin-bottom:4px;">PASTE BACKUP TO RESTORE:</div>';
+    html += '<textarea id="importArea" class="backup" placeholder="Paste previously copied backup text here"></textarea>';
+    html += '<button class="btn btn-outline" onclick="doImport()">RESTORE</button>';
+    if (S.importMsg) html += '<div class="msg-banner" style="margin-top:10px;">' + esc(S.importMsg) + '</div>';
+    html += '</div>';
+  }
+  html += winClose();
   return html;
 }
 
-function renderExerciseCard(ex, suggestion) {
-  const sets = State.todayLog[ex.name] || [];
-  const isBilateral = ex.type === "bilateral";
-  const isLeftOnly = ex.type === "left-only";
-  const noteHtml = ex.note ? `<div style="display:inline-block; font-size:10px; color:#FFD166; letter-spacing:0.5px; background:#1F1A0E; border:1px solid #4A3F1E; border-radius:2px; padding:2px 8px; margin-bottom:8px;">${esc(ex.note.toUpperCase())}</div>` : "";
-  const suggHtml = suggestion ? `<div style="border:1px solid #131E33; border-left:2px solid #2ED3FF; border-radius:2px; padding:8px 10px; margin-bottom:10px; background:#080D18;">
-      <div class="sys-font" style="font-size:9px; letter-spacing:1.5px; color:#5E7291; margin-bottom:4px;">SYSTEM SUGGESTS</div>
-      ${exerciseSuggestion(suggestion)}
-    </div>` : "";
+function renderQuests(d) {
+  var baseCat = DAY_BASE_CATEGORY[d.dayType];
+  var variant = d.dayType.indexOf(" ") > -1 ? d.dayType.split(" ")[1] : "";
+  if (d.dayType === "Rest") {
+    var html0 = winOpen("#4ADE80");
+    html0 += sectionLabel("RECOVERY QUEST", "#4ADE80");
+    html0 += '<div class="sys" style="font-size:18px;margin-bottom:8px;">NO DUNGEON TODAY</div>';
+    html0 += '<p style="font-size:14px;color:#B8C7DE;">Rest days are still part of the quest. Sleep 7-8 hours and hit your calorie target — check them off under the <b>RECOVER</b> tab. This is when the System actually builds new stats.</p>';
+    html0 += winClose();
+    return html0;
+  }
+  var accent = d.questComplete ? "#4ADE80" : "#2ED3FF";
+  var html = winOpen(accent);
+  html += '<div class="quest-header"><div>' + sectionLabel(d.questComplete ? "QUEST COMPLETE" : "DAILY QUEST", accent) +
+    '<div class="sys" style="font-size:16px;">' + baseCat.toUpperCase() + ' DAY<span class="day-badge">VARIANT ' + variant + '</span></div></div>';
+  html += '<div class="quest-count mono" style="color:' + accent + '">' + d.todayCompletion.done + "/" + d.todayCompletion.total + "</div></div>";
+  html += winClose();
 
-  let rowsHtml = "";
-  if (isBilateral) {
-    let rows = "";
-    for (let i = 0; i < ex.sets; i++) {
-      const s = sets[i] || { w: "", r: "" };
-      rows += `<div style="display:grid; grid-template-columns:16px 1fr 12px 1fr; gap:6px; align-items:center;">
-        <span class="num" style="font-size:11px; color:#5E7291;">${i + 1}</span>
-        <input type="number" inputmode="decimal" placeholder="kg" class="num input-cell" value="${s.w === "" || s.w == null ? "" : s.w}" data-ex="${esc(ex.name)}" data-idx="${i}" data-field="w" data-mode="bilateral">
-        <span style="color:#3A4A6A; text-align:center;">×</span>
-        <input type="number" inputmode="numeric" placeholder="reps" class="num input-cell" value="${s.r === "" || s.r == null ? "" : s.r}" data-ex="${esc(ex.name)}" data-idx="${i}" data-field="r" data-mode="bilateral">
-      </div>`;
+  d.plan.forEach(function (ex) { html += exerciseCardHtml(ex, S.todayLog[ex.name] || [], d.suggestions[ex.name]); });
+  return html;
+}
+
+function exerciseCardHtml(ex, sets, suggestion) {
+  var delay = nextDelay();
+  var html = '<div class="ex-card card-in" style="animation-delay:' + delay + 'ms;">';
+  html += '<div class="ex-head"><h3 class="ex-name">' + esc(ex.name) + '</h3><span class="ex-target mono">' + ex.sets + '\u00d7' + ex.reps + '</span></div>';
+  if (ex.note) html += '<div class="ex-note">' + esc(ex.note.toUpperCase()) + '</div>';
+  if (suggestion) html += '<div class="suggest-box"><div class="suggest-label">SYSTEM SUGGESTS</div>' + exerciseSuggestionHtml(suggestion) + '</div>';
+  var safeName = esc(ex.name).replace(/'/g, "\\'");
+
+  if (ex.type === "bilateral") {
+    for (var i = 0; i < ex.sets; i++) {
+      var s = sets[i] || { w: "", r: "" };
+      html += '<div class="set-row"><span class="set-idx mono">' + (i + 1) + '</span>' +
+        '<input class="numfield mono" type="number" inputmode="decimal" placeholder="kg" value="' + esc(s.w) + '" onchange="handleBilateral(\'' + safeName + '\',' + i + ',\'w\',this.value)" />' +
+        '<span class="set-x">\u00d7</span>' +
+        '<input class="numfield mono" type="number" inputmode="numeric" placeholder="reps" value="' + esc(s.r) + '" onchange="handleBilateral(\'' + safeName + '\',' + i + ',\'r\',this.value)" /></div>';
     }
-    rowsHtml = `<div style="display:flex; flex-direction:column; gap:6px;">${rows}</div>`;
   } else if (ex.type === "unilateral") {
-    let rows = "";
-    for (let i = 0; i < ex.sets; i++) {
-      const s = sets[i] || { L: { w: "", r: "" }, R: { w: "", r: "" } };
-      let sideRows = "";
-      ["L", "R"].forEach((side) => {
-        const sv = s[side] || { w: "", r: "" };
-        sideRows += `<div style="display:grid; grid-template-columns:16px 1fr 12px 1fr; gap:6px; align-items:center; margin-bottom:4px;">
-          <span class="num" style="font-size:11px; color:${side === "L" ? "#2ED3FF" : "#8B6FFF"};">${side}</span>
-          <input type="number" inputmode="decimal" placeholder="kg" class="num input-cell" value="${sv.w === "" || sv.w == null ? "" : sv.w}" data-ex="${esc(ex.name)}" data-idx="${i}" data-side="${side}" data-field="w" data-mode="unilateral">
-          <span style="color:#3A4A6A; text-align:center;">×</span>
-          <input type="number" inputmode="numeric" placeholder="reps" class="num input-cell" value="${sv.r === "" || sv.r == null ? "" : sv.r}" data-ex="${esc(ex.name)}" data-idx="${i}" data-side="${side}" data-field="r" data-mode="unilateral">
-        </div>`;
+    for (var j = 0; j < ex.sets; j++) {
+      var sj = sets[j] || { L: { w: "", r: "" }, R: { w: "", r: "" } };
+      html += '<div class="side-block"><div class="set-idx-label mono">SET ' + (j + 1) + '</div>';
+      ["L", "R"].forEach(function (side) {
+        var sideVal = sj[side] || { w: "", r: "" };
+        var color = side === "L" ? "#2ED3FF" : "#8B6FFF";
+        html += '<div class="set-row"><span class="set-idx mono" style="color:' + color + '">' + side + '</span>' +
+          '<input class="numfield mono" type="number" inputmode="decimal" placeholder="kg" value="' + esc(sideVal.w) + '" onchange="handleUnilateral(\'' + safeName + '\',' + j + ',\'' + side + '\',\'w\',this.value)" />' +
+          '<span class="set-x">\u00d7</span>' +
+          '<input class="numfield mono" type="number" inputmode="numeric" placeholder="reps" value="' + esc(sideVal.r) + '" onchange="handleUnilateral(\'' + safeName + '\',' + j + ',\'' + side + '\',\'r\',this.value)" /></div>';
       });
-      rows += `<div style="border:1px solid #131E33; border-radius:2px; padding:8px;">
-        <div class="num" style="font-size:10px; color:#5E7291; margin-bottom:5px;">SET ${i + 1}</div>
-        ${sideRows}
-      </div>`;
+      html += "</div>";
     }
-    rowsHtml = `<div style="display:flex; flex-direction:column; gap:8px;">${rows}</div>`;
-  } else if (isLeftOnly) {
-    let rows = "";
-    for (let i = 0; i < ex.sets; i++) {
-      const s = sets[i] || { L: { w: "", r: "" } };
-      const sv = s.L || { w: "", r: "" };
-      rows += `<div style="display:grid; grid-template-columns:16px 1fr 12px 1fr; gap:6px; align-items:center;">
-        <span class="num" style="font-size:11px; color:#2ED3FF;">L</span>
-        <input type="number" inputmode="decimal" placeholder="kg" class="num input-cell" value="${sv.w === "" || sv.w == null ? "" : sv.w}" data-ex="${esc(ex.name)}" data-idx="${i}" data-side="L" data-field="w" data-mode="unilateral">
-        <span style="color:#3A4A6A; text-align:center;">×</span>
-        <input type="number" inputmode="numeric" placeholder="reps" class="num input-cell" value="${sv.r === "" || sv.r == null ? "" : sv.r}" data-ex="${esc(ex.name)}" data-idx="${i}" data-side="L" data-field="r" data-mode="unilateral">
-      </div>`;
+  } else if (ex.type === "left-only") {
+    for (var k = 0; k < ex.sets; k++) {
+      var sk = sets[k] || { L: { w: "", r: "" } };
+      var lv = sk.L || { w: "", r: "" };
+      html += '<div class="set-row"><span class="set-idx mono" style="color:#2ED3FF">L</span>' +
+        '<input class="numfield mono" type="number" inputmode="decimal" placeholder="kg" value="' + esc(lv.w) + '" onchange="handleUnilateral(\'' + safeName + '\',' + k + ',\'L\',\'w\',this.value)" />' +
+        '<span class="set-x">\u00d7</span>' +
+        '<input class="numfield mono" type="number" inputmode="numeric" placeholder="reps" value="' + esc(lv.r) + '" onchange="handleUnilateral(\'' + safeName + '\',' + k + ',\'L\',\'r\',this.value)" /></div>';
     }
-    rowsHtml = `<div style="display:flex; flex-direction:column; gap:6px;">${rows}</div>`;
   }
-
-  return sysWindow("#1B2A45", `
-    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
-      <h3 class="body-font" style="margin:0; font-size:15px; font-weight:700; color:#DCEFFF;">${esc(ex.name)}</h3>
-      <span class="num" style="font-size:11px; color:#5E7291;">${ex.sets}×${esc(ex.reps)}</span>
-    </div>
-    ${noteHtml}
-    ${suggHtml}
-    ${rowsHtml}
-  `, "margin-bottom:10px; padding:14px;");
-}
-
-function renderQuestsTab(c) {
-  if (dayType === "Rest") {
-    return sysWindow("#4ADE80", `
-      ${sectionLabel("RECOVERY QUEST", "#4ADE80")}
-      <div class="sys-font" style="font-size:20px; font-weight:900; margin-bottom:8px;">NO DUNGEON TODAY</div>
-      <p class="body-font" style="font-size:14px; color:#B8C7DE; line-height:1.6;">
-        Rest days are still part of the quest. Sleep 7-8 hours and hit your calorie target — check them off under the <b>RECOVERY</b> tab. This is when the System actually builds new stats.
-      </p>
-    `);
-  }
-  const plan = PLAN[dayType] || [];
-  let html = sysWindow(c.questComplete ? "#4ADE80" : "#2ED3FF", `
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <div>
-        ${sectionLabel(c.questComplete ? "QUEST COMPLETE" : "DAILY QUEST", c.questComplete ? "#4ADE80" : "#2ED3FF")}
-        <div class="sys-font" style="font-size:18px; font-weight:900;">${dayType.toUpperCase()} DAY</div>
-      </div>
-      <div class="num" style="font-size:15px; color:${c.questComplete ? "#4ADE80" : "#8FA3C4"};">${c.completion.done}/${c.completion.total}</div>
-    </div>
-  `, "margin-bottom:14px;");
-
-  plan.forEach((ex) => { html += renderExerciseCard(ex, c.suggestions[ex.name]); });
+  html += "</div>";
   return html;
 }
 
-function renderIntelTab(c) {
-  const hasData = c.weeklyVolume.length > 0;
-  let html = sysWindow("#8B6FFF", `
-    ${sectionLabel("WEEKLY VOLUME BY SPLIT", "#8B6FFF")}
-    ${hasData ? barChart(c.weeklyVolume) : `<p class="body-font" style="color:#5E7291; font-size:13px; text-align:center; padding:20px 0;">Log a few sessions to see your split balance here.</p>`}
-  `, "margin-bottom:14px;");
+function renderIntel(d) {
+  var html = winOpen("#8B6FFF");
+  html += sectionLabel("WEEKLY VOLUME BY SPLIT", "#8B6FFF");
+  html += barChartSvg(d.weeklyVolume);
+  html += winClose();
 
-  if (c.balance.flag) {
-    html += sysWindow("#FF9F5A", `
-      ${sectionLabel("BALANCE FLAG", "#FF9F5A")}
-      <p class="body-font" style="font-size:13px; color:#DCEFFF; margin:0; line-height:1.5;">${esc(c.balance.text)}</p>
-    `, "margin-bottom:14px;");
+  if (d.balance.flag) {
+    html += winOpen("#FF9F5A");
+    html += sectionLabel("BALANCE FLAG", "#FF9F5A");
+    html += '<p style="font-size:13px;color:var(--text);margin:0;">' + esc(d.balance.text) + '</p>';
+    html += winClose();
   }
 
-  [["Push", ["Push A", "Push B"]], ["Pull", ["Pull A", "Pull B"]], ["Legs", ["Legs A", "Legs B"]]].forEach(([cat, variants]) => {
-    const accent = cat === "Push" ? "#2ED3FF" : cat === "Pull" ? "#8B6FFF" : "#FFD166";
-    html += `<div style="margin-bottom:12px;">${sectionLabel(cat.toUpperCase() + " — AESTHETIC PROGRESSION", accent)}`;
-    variants.forEach((variant) => {
-      html += `<div class="sys-font" style="font-size:9px; letter-spacing:2px; color:${accent}; margin:10px 0 6px;">${variant.toUpperCase()}</div>`;
-      PLAN[variant].forEach((ex) => {
-        html += sysWindow("#1B2A45", `
-          <div style="display:flex; justify-content:space-between; margin-bottom:6px; gap:8px;">
-            <span class="body-font" style="font-size:14px; font-weight:700;">${esc(ex.name)}</span>
-            <span class="num" style="font-size:10px; color:#5E7291; white-space:nowrap;">${esc(ex.reps)} target</span>
-          </div>
-          ${exerciseSuggestion(c.suggestions[ex.name])}
-        `, "margin-bottom:8px; padding:12px 14px;");
+  ["Push", "Pull", "Legs"].forEach(function (cat) {
+    var color = cat === "Push" ? "#2ED3FF" : cat === "Pull" ? "#8B6FFF" : "#FFD166";
+    html += sectionLabel(cat.toUpperCase() + " — PROGRESSION", color);
+    [cat + " A", cat + " B"].forEach(function (dayKey) {
+      html += '<div style="font-size:10px;color:var(--dim);letter-spacing:1px;margin:4px 0 6px;">' + dayKey.toUpperCase() + '</div>';
+      PLAN[dayKey].forEach(function (ex) {
+        html += winOpen("#1B2A45", "padding:12px 14px;");
+        html += '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:14px;font-weight:700;">' + esc(ex.name) + '</span><span class="mono" style="font-size:10px;color:var(--dim);">' + ex.reps + ' target</span></div>';
+        html += exerciseSuggestionHtml(d.suggestions[ex.name]);
+        html += winClose();
       });
     });
-    html += `</div>`;
   });
 
-  html += `<p class="body-font" style="font-size:11px; color:#5E7291; margin-top:4px; line-height:1.6;">
-    Suggestions use double-progression logic on your last logged session for each exercise: hit the top of the rep range on every set → add weight; land inside the range → add a rep; miss the bottom of the range → hold and repeat. It's a starting recommendation, not a command — you know your body and gym on any given day.
-  </p>`;
+  html += '<p style="font-size:11px;color:var(--dim);margin-top:4px;">Suggestions use double-progression logic on your last logged session for each exercise: hit the top of the rep range on every set \u2192 add weight; land inside the range \u2192 add a rep; miss the bottom of the range \u2192 hold and repeat. It\'s a starting recommendation, not a command.</p>';
   return html;
 }
 
-function renderGrowthTab(c) {
-  const history = State.bwHistory;
-  let html = sysWindow("#FFD166", `
-    ${sectionLabel("MASS TRACKING", "#FFD166")}
-    <div style="display:flex; gap:8px;">
-      <input id="bwInput" type="number" inputmode="decimal" placeholder="Today's weight (kg)" class="num input-cell" style="flex:1; text-align:left;">
-      <button onclick="saveBodyweight()" class="sys-font" style="background:#FFD166; border:none; border-radius:2px; color:#05070C; font-weight:700; padding:0 18px; font-size:12px; letter-spacing:1px; cursor:pointer;">LOG</button>
-    </div>
-  `, "margin-bottom:16px;");
+function renderGrowth(d) {
+  var html = winOpen("#FFD166");
+  html += sectionLabel("MASS TRACKING", "#FFD166");
+  html += '<div class="flex-row"><input class="numfield mono grow" style="text-align:left;" type="number" inputmode="decimal" placeholder="Today\'s weight (kg)" value="' + esc(S.bwInput) + '" oninput="handleBWInput(this.value)" />';
+  html += '<button class="btn" style="background:#FFD166;color:#05070C;" onclick="saveBW()">LOG</button></div>';
+  html += winClose();
 
-  if (history.length > 0) {
-    html += `<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px;">
-      ${miniStat("LATEST", `${c.latestBw}kg`, "#DCEFFF")}
-      ${miniStat("GAINED", `${c.bwGain > 0 ? "+" : ""}${c.bwGain.toFixed(1)}kg`, c.bwGain >= 0 ? "#4ADE80" : "#FF9F9F")}
-      ${miniStat("ENTRIES", history.length, "#8FA3C4")}
-    </div>`;
+  if (S.bwHistory.length > 0) {
+    html += '<div class="mini-grid">' + miniStat("LATEST", d.latestBw + "kg", "#DCEFFF") +
+      miniStat("GAINED", (d.bwGain > 0 ? "+" : "") + d.bwGain.toFixed(1) + "kg", d.bwGain >= 0 ? "#4ADE80" : "#FF9F9F") +
+      miniStat("ENTRIES", S.bwHistory.length, "#8FA3C4") + "</div>";
   }
 
-  html += sysWindow("#2ED3FF", `
-    ${sectionLabel("GROWTH CURVE", "#2ED3FF")}
-    ${history.length >= 2 ? lineChart(history) : `<p class="body-font" style="color:#5E7291; font-size:13px; text-align:center; padding:24px 0;">Log at least 2 entries to reveal your growth curve.</p>`}
-  `);
+  html += winOpen("#2ED3FF");
+  html += sectionLabel("GROWTH CURVE", "#2ED3FF");
+  html += lineChartSvg(S.bwHistory);
+  html += winClose();
 
-  html += `<p class="body-font" style="font-size:12px; color:#5E7291; margin-top:14px; line-height:1.6;">
-    Use the curve to judge your trend. If bodyweight is not moving toward your intended goal for several weeks, review food intake before adding more training volume.
-  </p>`;
+  html += '<p style="font-size:12px;color:var(--dim);margin-top:14px;">Target: ~0.5–1kg gain per month. Flat for 2-3 weeks straight means your surplus isn\'t big enough — raise calories, not just training volume.</p>';
   return html;
 }
 
-function renderRecoveryTab() {
-  const today = State.nutrition[date] || {};
-  const items = [
-    { key: "protein", label: "Protein target hit", hint: "Your planned daily protein target" },
+function renderRecovery(d) {
+  var today = S.nutrition[S.date] || {};
+  var items = [
+    { key: "protein", label: "Protein target hit (130–150g)", hint: "eggs, paneer, chicken, dal, curd, whey" },
     { key: "surplus", label: "Ate in a calorie surplus", hint: "4-5 meals across the day" },
-    { key: "sleep", label: "Slept 7-8 hours", hint: "recovery window — non-negotiable" },
+    { key: "sleep", label: "Slept 7-8 hours", hint: "recovery window — non-negotiable" }
   ];
-  const allDone = items.every((it) => today[it.key]);
+  var allDone = items.every(function (it) { return today[it.key]; });
+  var accent = allDone ? "#4ADE80" : "#8B6FFF";
+  var html = winOpen(accent);
+  html += sectionLabel(allDone ? "RECOVERY COMPLETE" : "RECOVERY CHECKLIST", accent);
+  html += '<p style="font-size:13px;color:#B8C7DE;margin:0;">This is where STR and PHYSIQUE stats actually get built — training only creates the demand.</p>';
+  html += winClose();
 
-  let html = sysWindow(allDone ? "#4ADE80" : "#8B6FFF", `
-    ${sectionLabel(allDone ? "RECOVERY COMPLETE" : "RECOVERY CHECKLIST", allDone ? "#4ADE80" : "#8B6FFF")}
-    <p class="body-font" style="font-size:13px; color:#B8C7DE; margin:0; line-height:1.5;">This is where STR and PHYSIQUE stats actually get built — training only creates the demand.</p>
-  `, "margin-bottom:14px;");
-
-  items.forEach((it) => {
-    const checked = !!today[it.key];
-    html += `<button onclick="toggleNutrition('${it.key}')" class="checklist-btn" style="border:1px solid ${checked ? "#4ADE80" : "#1B2A45"};">
-      <div style="width:20px; height:20px; border-radius:3px; flex-shrink:0; background:${checked ? "#4ADE80" : "transparent"}; border:1px solid ${checked ? "#4ADE80" : "#3A4A6A"}; display:flex; align-items:center; justify-content:center;">
-        ${checked ? `<span style="color:#05070C; font-size:13px; font-weight:700;">✓</span>` : ""}
-      </div>
-      <div>
-        <div class="body-font" style="font-size:14px; font-weight:700; color:#DCEFFF;">${esc(it.label)}</div>
-        <div style="font-size:12px; color:#5E7291; margin-top:2px;">${esc(it.hint)}</div>
-      </div>
-    </button>`;
+  items.forEach(function (it) {
+    var on = !!today[it.key];
+    html += '<button class="checklist-item" style="border-color:' + (on ? "#4ADE80" : "var(--border)") + '" onclick="toggleNutrition(\'' + it.key + '\')">';
+    html += '<div class="checkbox ' + (on ? "on" : "") + '" style="background:' + (on ? "#4ADE80" : "transparent") + ';border-color:' + (on ? "#4ADE80" : "#3A4A6A") + '">' + (on ? '<span style="color:#05070C;font-size:13px;font-weight:700;">\u2713</span>' : "") + '</div>';
+    html += '<div><div class="checklist-label">' + esc(it.label) + '</div><div class="checklist-hint">' + esc(it.hint) + '</div></div></button>';
   });
   return html;
 }
 
 /* ============================================================
-   TOP-LEVEL RENDER
+   MAIN RENDER
    ============================================================ */
 function render() {
-  const c = computeAll();
-  const tabs = ["Status", "Quests", "Intel", "Growth", "Recovery"];
-  let body;
-  if (State.tab === "Status") body = renderStatusTab(c);
-  else if (State.tab === "Quests") body = renderQuestsTab(c);
-  else if (State.tab === "Intel") body = renderIntelTab(c);
-  else if (State.tab === "Growth") body = renderGrowthTab(c);
-  else body = renderRecoveryTab();
+  S.cardCounter = 0;
+  var d = computeDerived();
 
-  const navHtml = tabs.map(t => `<button class="tab-btn sys-font" onclick="setTab('${t}')" style="border-bottom:${State.tab === t ? "2px solid #2ED3FF" : "2px solid transparent"}; color:${State.tab === t ? "#DCEFFF" : "#5E7291"};">${t.toUpperCase()}</button>`).join("");
+  if (S.prevLevel !== null && d.level > S.prevLevel) {
+    S.levelUpFlash = true;
+    setTimeout(function () { S.levelUpFlash = false; render(); }, 2200);
+  }
+  S.prevLevel = d.level;
 
-  const levelUpHtml = State.levelUpFlash ? `
-    <div style="position:fixed; top:18%; left:50%; transform:translateX(-50%); z-index:50; text-align:center; animation:popIn 0.4s ease-out; pointer-events:none;">
-      <div class="sys-font glow-text" style="font-size:13px; letter-spacing:4px; color:#2ED3FF;">LEVEL UP</div>
-      <div class="sys-font" style="font-size:48px; font-weight:900; color:#DCEFFF; text-shadow:0 0 30px #2ED3FF;">${c.level}</div>
-    </div>` : "";
+  var tabs = ["Status", "Quests", "Intel", "Growth", "Recovery"];
+  var tabLabels = { Status: "STATUS", Quests: "QUEST", Intel: "INTEL", Growth: "GROWTH", Recovery: "RECOVER" };
 
-  document.getElementById("app").innerHTML = `
-    <div style="min-height:100vh; background:radial-gradient(ellipse at 50% -10%, #0D1830 0%, #05070C 55%); color:#DCEFFF; padding-bottom:50px;">
-      ${levelUpHtml}
-      <header style="padding:26px 18px 16px; border-bottom:1px solid #1B2A45;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <div class="sys-font" style="font-size:10px; letter-spacing:3px; color:#5E7291;">THE SYSTEM</div>
-            <h1 class="sys-font glow-text" style="margin:2px 0 0; font-size:26px; font-weight:900; letter-spacing:1px;">HUNTER: ${esc(HUNTER_NAME.toUpperCase())}</h1>
-          </div>
-          <div style="text-align:right;">
-            <div class="sys-font" style="font-size:20px; font-weight:900; color:${c.rank.color}; text-shadow:0 0 14px ${c.rank.color}88;">${c.rank.label}</div>
-            <div style="font-size:10px; color:#5E7291; letter-spacing:1px;">RANK</div>
-          </div>
-        </div>
-        <div style="font-size:12px; color:#5E7291; margin-top:6px;">${esc(fmtDate(date))}</div>
-      </header>
+  var html = "";
+  if (S.levelUpFlash) {
+    html += '<div class="level-up-flash"><div class="level-up-inner"><div class="level-ring"></div><div class="level-ring" style="animation-delay:0.4s;"></div>' +
+      '<div class="sys" style="font-size:11px;letter-spacing:4px;color:#2ED3FF;position:relative;">LEVEL UP</div>' +
+      '<div class="sys" style="font-size:40px;color:#DCEFFF;text-shadow:0 0 30px #2ED3FF;position:relative;">' + d.level + "</div></div></div>";
+  }
 
-      <nav style="display:flex; border-bottom:1px solid #1B2A45; background:#080B12;">${navHtml}</nav>
+  html += '<div class="header"><div class="header-row"><div><div class="header-sub">THE SYSTEM</div><h1 class="header-title">HUNTER: ' + HUNTER_NAME.toUpperCase() + '</h1></div>';
+  html += '<div class="rank-badge"><div class="rank-letter" style="color:' + d.rank.color + ';text-shadow:0 0 14px ' + d.rank.color + '88;">' + d.rank.label + '</div><div class="rank-label">RANK</div></div></div>';
+  html += '<div class="header-date">' + fmtDate(S.date) + "</div>
+<div class="system-motion mono" style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:9px;letter-spacing:1.5px;color:#5E7291;">
+  <span style="width:6px;height:6px;border-radius:50%;background:#4ADE80;box-shadow:0 0 9px #4ADE80;display:inline-block;animation:pulseDot 1.4s ease-in-out infinite;"></span>
+  SYSTEM ONLINE
+  <span style="opacity:.45;">//</span>
+  <span class="system-flicker">AESTHETIC PROTOCOL</span>
+</div>
+</div>";
 
-      <main style="padding:18px;">${body}</main>
-    </div>
-  `;
-  attachInputListeners();
+  html += '<nav class="nav">';
+  tabs.forEach(function (t) { html += '<button class="' + (S.tab === t ? "active" : "") + '" onclick="setTab(\'' + t + '\')">' + tabLabels[t] + "</button>"; });
+  html += "</nav>";
+
+  if (!S.storageOk) html += '<div class="error-banner">Could not save to this device\'s storage. Your entries still work this session — use Data Backup on the Status tab before closing.</div>';
+
+  html += '<main class="main main-fade">';
+  if (S.tab === "Status") html += renderStatus(d);
+  else if (S.tab === "Quests") html += renderQuests(d);
+  else if (S.tab === "Intel") html += renderIntel(d);
+  else if (S.tab === "Growth") html += renderGrowth(d);
+  else html += renderRecovery(d);
+  html += "</main>";
+
+  document.getElementById("app").innerHTML = html;
+  revealCards();
 }
 
-function attachInputListeners() {
-  document.querySelectorAll('input[data-ex]').forEach((input) => {
-    input.addEventListener('change', (e) => {
-      const el = e.target;
-      const exName = el.getAttribute('data-ex');
-      const idx = parseInt(el.getAttribute('data-idx'), 10);
-      const field = el.getAttribute('data-field');
-      const mode = el.getAttribute('data-mode');
-      const value = el.value;
-      if (mode === 'bilateral') {
-        updateBilateral(exName, idx, field, value);
-      } else {
-        const side = el.getAttribute('data-side');
-        updateUnilateral(exName, idx, side, field, value);
-      }
-      render();
+function revealCards() {
+  var cards = document.querySelectorAll(".card-in:not(.show)");
+  // Double rAF so the browser paints the initial (hidden) state before we flip it,
+  // which is what actually makes the transition play.
+  requestAnimationFrame(function () {
+    requestAnimationFrame(function () {
+      cards.forEach(function (c) { c.classList.add("show"); });
     });
   });
+  // Safety net: whatever happens with the transition above, force full visibility
+  // shortly after so nothing can ever get permanently stuck invisible again.
+  setTimeout(function () {
+    document.querySelectorAll(".card-in").forEach(function (c) {
+      c.style.opacity = "1";
+      c.style.transform = "none";
+    });
+  }, 700);
 }
 
-render();
-</script>
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js", {scope:"./"}).catch(()=>{}));
-}
+/* ============================================================
+   BACKGROUND PARTICLE NETWORK (canvas, lightweight, offline)
+   ============================================================ */
+(function initBg() {
+  var canvas = document.getElementById("bgcanvas");
+  var ctx = canvas.getContext("2d");
+  var W, H, particles = [];
+  var COUNT = 26;
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener("resize", resize);
+  resize();
+  for (var i = 0; i < COUNT; i++) {
+    particles.push({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25 });
+  }
+  function tick() {
+    ctx.clearRect(0, 0, W, H);
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+    }
+    for (var i2 = 0; i2 < particles.length; i2++) {
+      for (var j2 = i2 + 1; j2 < particles.length; j2++) {
+        var a = particles[i2], b = particles[j2];
+        var dx = a.x - b.x, dy = a.y - b.y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 140) {
+          ctx.strokeStyle = "rgba(46,211,255," + (0.12 * (1 - dist / 140)) + ")";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+      ctx.fillStyle = "rgba(139,111,255,0.5)";
+      ctx.beginPath(); ctx.arc(particles[i2].x, particles[i2].y, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+/* ============================================================
+   BOOT SEQUENCE
+   ============================================================ */
+(function boot() {
+  var lines = [
+    "[SYSTEM] Initializing Hunter Interface...",
+    "[SYSTEM] Loading Hunter: " + HUNTER_NAME.toUpperCase() + "...",
+    "[SYSTEM] Reading training archive...",
+    "[SYSTEM] Status Window ready."
+  ];
+  var container = document.getElementById("bootLines");
+  lines.forEach(function (line, i) {
+    var el = document.createElement("div");
+    el.className = "boot-line";
+    el.style.animationDelay = (i * 0.35) + "s";
+    el.textContent = line;
+    container.appendChild(el);
+  });
+  render();
+  setTimeout(function () {
+    document.getElementById("boot").classList.add("hidden");
+  }, 1900);
+})();
 </script>
 </body>
 </html>
