@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- HUNTER XP SYSTEM V3 -->
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -671,69 +672,6 @@ function computeDerived() {
     level: level, xpIntoLevel: xpIntoLevel, xpNeeded: xpNeeded, nextLevelXP: nextLevelXP,
     xpPercent: xpPercent, rank: rank, streak: streak, prCount: prCount,
     completedWorkouts: completedWorkouts, streakBonus: streakBonus,
-    STR: STR, VIT: VIT, END: END, PHY: PHY,
-    dayType: dayType, plan: plan, todayCompletion: { done: done, total: total },
-    questComplete: total > 0 && done === total,
-    latestBw: latestBw, startBw: startBw, bwGain: bwGain
-  };
-}
-  var suggestions = {};
-  Object.keys(PLAN).forEach(function (cat) {
-    PLAN[cat].forEach(function (ex) { suggestions[ex.name] = buildSuggestion(ex, combinedLogs, S.date); });
-  });
-
-  var weeklyVolume = computeWeeklyVolume(combinedLogs);
-  var balance = computeBalance(weeklyVolume);
-
-  var level = Math.floor(xp / 100) + 1;
-  var xpIntoLevel = xp % 100;
-  var rank = RANKS.slice().reverse().find(function (r) { return level >= r.min; }) || RANKS[0];
-
-  var streak = 0;
-  for (var i = 0; i < 60; i++) {
-    var dt = todayKey(-i);
-    var dType = dayTypeFor(dt);
-    if (dType === "Rest") continue;
-    if (sessions[dt]) streak++;
-    else if (i === 0) continue;
-    else break;
-  }
-
-  var sessionCount = Object.keys(sessions).length;
-  var STR = Math.min(100, Math.round(vol / 250));
-  var VIT = Math.min(100, Math.round(streak * 8));
-  var END = Math.min(100, Math.round(sessionCount * 4));
-
-  var latestBw = S.bwHistory.length ? S.bwHistory[S.bwHistory.length - 1].weight : null;
-  var startBw = S.bwHistory.length ? S.bwHistory[0].weight : null;
-  var bwGain = latestBw && startBw ? latestBw - startBw : 0;
-  var PHY = Math.min(100, Math.max(0, Math.round(bwGain * 18)));
-
-  var dayType = dayTypeFor(S.date);
-  var plan = PLAN[dayType] || [];
-  var done = 0, total = 0;
-  plan.forEach(function (ex) {
-    var sets = S.todayLog[ex.name] || [];
-    if (ex.type === "bilateral") {
-      total += ex.sets;
-      for (var i2 = 0; i2 < ex.sets; i2++) if (sets[i2] && sets[i2].w && sets[i2].r) done++;
-    } else if (ex.type === "unilateral") {
-      total += ex.sets * 2;
-      for (var i3 = 0; i3 < ex.sets; i3++) {
-        var s3 = sets[i3];
-        if (s3 && s3.L && s3.L.w && s3.L.r) done++;
-        if (s3 && s3.R && s3.R.w && s3.R.r) done++;
-      }
-    } else if (ex.type === "left-only") {
-      total += ex.sets;
-      for (var i4 = 0; i4 < ex.sets; i4++) if (sets[i4] && sets[i4].L && sets[i4].L.w && sets[i4].L.r) done++;
-    }
-  });
-
-  return {
-    combinedLogs: combinedLogs, totalXP: xp, totalVolume: vol, sessionCount: sessionCount,
-    suggestions: suggestions, weeklyVolume: weeklyVolume, balance: balance,
-    level: level, xpIntoLevel: xpIntoLevel, rank: rank, streak: streak,
     STR: STR, VIT: VIT, END: END, PHY: PHY,
     dayType: dayType, plan: plan, todayCompletion: { done: done, total: total },
     questComplete: total > 0 && done === total,
