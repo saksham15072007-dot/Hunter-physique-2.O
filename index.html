@@ -515,23 +515,168 @@ function doImport() {
 /* ============================================================
    DERIVED STATE
    ============================================================ */
+function xpLevelCost(level) {
+  // XP required to move from this level to the next.
+  // Starts gentle, then scales so high levels take real work.
+  return Math.round(100 + 25 * Math.pow(Math.max(0, level - 1), 1.35));
+}
+
+function xpTotalForLevel(level) {
+  var total = 0;
+  for (var l = 1; l < level; l++) total += xpLevelCost(l);
+  return total;
+}
+
+function estimateSetValue(set) {
+  if (!set) return 0;
+  if (set.w && set.r) return Number(set.w) * Number(set.r);
+  if (set.L && set.R && set.L.w && set.L.r && set.R.w && set.R.r) {
+    return Math.max(Number(set.L.w) * Number(set.L.r), Number(set.R.w) * Number(set.R.r));
+  }
+  if (set.L && set.L.w && set.L.r) return Number(set.L.w) * Number(set.L.r);
+  if (set.R && set.R.w && set.R.r) return Number(set.R.w) * Number(set.R.r);
+  return 0;
+}
+
+function setIsLogged(set) {
+  return !!(set && ((set.w && set.r) || (set.L && set.L.w && set.L.r) || (set.R && set.R.w && set.R.r)));
+}
+
+function workoutCompletionForDate(date, logs) {
+  var type = dayTypeFor(date);
+  var plan = PLAN[type] || [];
+  if (!plan.length) return false;
+  var log = logs[date] || {};
+  var total = 0, done = 0;
+  plan.forEach(function (ex) {
+    total += ex.sets;
+    var sets = log[ex.name] || [];
+    for (var i = 0; i < ex.sets; i++) if (setIsLogged(sets[i])) done++;
+  });
+  return total > 0 && done === total;
+}
+
 function computeDerived() {
   var combinedLogs = Object.assign({}, S.allLogs);
   combinedLogs[S.date] = S.todayLog;
 
   var xp = 0, vol = 0;
   var sessions = {};
-  Object.keys(combinedLogs).forEach(function (d) {
+  var exerciseBest = {};
+  var dates = Object.keys(combinedLogs).sort();
+  var completedWorkouts = 0;
+  var prCount = 0;
+  var streakBonus = 0;
+
+  dates.forEach(function (d) {
     var exs = combinedLogs[d] || {};
+    var sessionHadWork = false;
+
     Object.keys(exs).forEach(function (exName) {
-      (exs[exName] || []).forEach(function (s) {
-        if (s && s.w && s.r) { xp += 10; vol += Number(s.w) * Number(s.r); sessions[d] = true; }
-        if (s && s.L && s.L.w && s.L.r) { xp += 10; vol += Number(s.L.w) * Number(s.L.r); sessions[d] = true; }
-        if (s && s.R && s.R.w && s.R.r) { xp += 10; vol += Number(s.R.w) * Number(s.R.r); sessions[d] = true; }
+      var sets = exs[exName] || [];
+      var best = 0;
+      var validSetCount = 0;
+
+      sets.forEach(function (s) {
+        if (!setIsLogged(s)) return;
+        validSetCount++;
+        sessionHadWork = true;
+        // One logged unilateral set = one set of XP, not two.
+        xp += 10;
+        vol += estimateSetValue(s);
+        best = Math.max(best, estimateSetValue(s));
       });
+
+      if (validSetCount && best > 0) {
+        if (exerciseBest[exName] !== undefined && best > exerciseBest[exName]) {
+          // New performance PR: meaningful bonus, but not enough to dominate the XP system.
+          xp += 25;
+          prCount++;
+        }
+        exerciseBest[exName] = Math.max(exerciseBest[exName] || 0, best);
+      }
     });
+
+    if (sessionHadWork) {
+      sessions[d] = true;
+      // Small reward for showing up, separate from set XP.
+      xp += 5;
+      if (workoutCompletionForDate(d, combinedLogs)) {
+        xp += 30;
+        completedWorkouts++;
+      }
+    }
   });
 
+  // Reward sustained consistency without making rest days a penalty.
+  var orderedSessions = Object.keys(sessions).sort();
+  for (var si = 1; si < orderedSessions.length; si++) {
+    var prev = new Date(orderedSessions[si - 1] + 'T00:00:00');
+    var cur = new Date(orderedSessions[si] + 'T00:00:00');
+    var daysApart = Math.round((cur - prev) / 86400000);
+    if (daysApart <= 3) { xp += 5; streakBonus += 5; }
+  }
+
+  var suggestions = {};
+  Object.keys(PLAN).forEach(function (cat) {
+    PLAN[cat].forEach(function (ex) { suggestions[ex.name] = buildSuggestion(ex, combinedLogs, S.date); });
+  });
+
+  var weeklyVolume = computeWeeklyVolume(combinedLogs);
+  var balance = computeBalance(weeklyVolume);
+
+  var level = 1;
+  while (level < 100 && xp >= xpTotalForLevel(level + 1)) level++;
+  var levelStartXP = xpTotalForLevel(level);
+  var nextLevelXP = xpLevelCost(level);
+  var xpIntoLevel = Math.max(0, xp - levelStartXP);
+  var xpNeeded = Math.max(0, nextLevelXP - xpIntoLevel);
+  var xpPercent = Math.min(100, Math.round((xpIntoLevel / nextLevelXP) * 100));
+  var rank = RANKS.slice().reverse().find(function (r) { return level >= r.min; }) || RANKS[0];
+
+  var streak = 0;
+  for (var i = 0; i < 60; i++) {
+    var dt = todayKey(-i);
+    var dType = dayTypeFor(dt);
+    if (dType === "Rest") continue;
+    if (sessions[dt]) streak++;
+    else if (i === 0) continue;
+    else break;
+  }
+
+  var sessionCount = Object.keys(sessions).length;
+  var STR = Math.min(100, Math.round(vol / 250));
+  var VIT = Math.min(100, Math.round(streak * 8));
+  var END = Math.min(100, Math.round(sessionCount * 4));
+
+  var latestBw = S.bwHistory.length ? S.bwHistory[S.bwHistory.length - 1].weight : null;
+  var startBw = S.bwHistory.length ? S.bwHistory[0].weight : null;
+  var bwGain = latestBw && startBw ? latestBw - startBw : 0;
+  var PHY = Math.min(100, Math.max(0, Math.round(bwGain * 18)));
+
+  var dayType = dayTypeFor(S.date);
+  var plan = PLAN[dayType] || [];
+  var done = 0, total = 0;
+  plan.forEach(function (ex) {
+    total += ex.sets;
+    var sets = S.todayLog[ex.name] || [];
+    for (var i2 = 0; i2 < ex.sets; i2++) {
+      if (sets[i2] && setIsLogged(sets[i2])) done++;
+    }
+  });
+
+  return {
+    combinedLogs: combinedLogs, totalXP: xp, totalVolume: vol, sessionCount: sessionCount,
+    suggestions: suggestions, weeklyVolume: weeklyVolume, balance: balance,
+    level: level, xpIntoLevel: xpIntoLevel, xpNeeded: xpNeeded, nextLevelXP: nextLevelXP,
+    xpPercent: xpPercent, rank: rank, streak: streak, prCount: prCount,
+    completedWorkouts: completedWorkouts, streakBonus: streakBonus,
+    STR: STR, VIT: VIT, END: END, PHY: PHY,
+    dayType: dayType, plan: plan, todayCompletion: { done: done, total: total },
+    questComplete: total > 0 && done === total,
+    latestBw: latestBw, startBw: startBw, bwGain: bwGain
+  };
+}
   var suggestions = {};
   Object.keys(PLAN).forEach(function (cat) {
     PLAN[cat].forEach(function (ex) { suggestions[ex.name] = buildSuggestion(ex, combinedLogs, S.date); });
@@ -727,13 +872,17 @@ function renderStatus(d) {
   html += sectionLabel("STATUS WINDOW", d.rank.color);
   html += '<div style="display:flex;align-items:baseline;gap:14px;margin-bottom:12px;">';
   html += '<div class="sys" style="font-size:40px;text-shadow:0 0 20px #2ED3FF;">Lv.' + d.level + '</div>';
-  html += '<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:10px;color:var(--dim);">XP TO NEXT LEVEL</span><span class="mono" style="font-size:10px;color:var(--dim);">' + d.xpIntoLevel + '/100</span></div>';
-  html += '<div class="stat-bar-track" style="height:8px;"><div class="stat-bar-fill bar-shimmer" style="width:' + d.xpIntoLevel + '%;background:linear-gradient(90deg,#2ED3FF88,#2ED3FF);box-shadow:0 0 10px #2ED3FF99;"></div></div></div></div>';
+  html += '<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:3px;"><span style="font-size:10px;color:var(--dim);">XP TO NEXT LEVEL</span><span class="mono" style="font-size:10px;color:var(--dim);">' + d.xpIntoLevel + '/' + d.nextLevelXP + '</span></div>';
+  html += '<div class="stat-bar-track" style="height:8px;"><div class="stat-bar-fill bar-shimmer" style="width:' + d.xpPercent + '%;background:linear-gradient(90deg,#2ED3FF88,#2ED3FF);box-shadow:0 0 10px #2ED3FF99;"></div></div>';
+  html += '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:9px;color:var(--dim);"><span>' + d.xpNeeded + ' XP remaining</span><span>' + d.totalXP + ' total XP</span></div></div></div>';
   html += statBar("STRENGTH", d.STR, "#2ED3FF");
   html += statBar("VITALITY (STREAK)", d.VIT, "#4ADE80");
   html += statBar("ENDURANCE (SESSIONS)", d.END, "#8B6FFF");
   html += statBar("PHYSIQUE (MASS GAINED)", d.PHY, "#FFD166");
   html += '<p style="font-size:11px;color:var(--dim);margin-top:8px;">Stats are a gamified read of your logged training data — not a clinical measurement of your actual strength or fitness.</p>';
+  html += '<div style="margin-top:10px;padding:9px 10px;border:1px solid #26344A;background:#080B12;font-size:10px;color:#8FA3C4;line-height:1.55;">';
+  html += '<b style="color:#2ED3FF;">XP INTEL:</b> +10/set &nbsp;•&nbsp; +5/session &nbsp;•&nbsp; +30/complete quest &nbsp;•&nbsp; +25/PR &nbsp;•&nbsp; +5/consistency link';
+  html += '</div>';
   html += winClose();
 
   html += '<div class="mini-grid">' + miniStat("STREAK", d.streak + "d", "#4ADE80") + miniStat("SESSIONS", d.sessionCount, "#2ED3FF") + miniStat("VOLUME", Math.round(d.totalVolume / 1000) + "k", "#8B6FFF") + "</div>";
